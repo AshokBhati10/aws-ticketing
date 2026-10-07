@@ -16,3 +16,5 @@ frontend/.env
 
 # OS / editor noise
 .DS_Store
+
+frontend/.envclr
