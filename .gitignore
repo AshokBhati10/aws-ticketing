@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Frontend build output
+frontend/dist/
+
+# Lambda deployment packages
+*.zip
+
+# Environment / secrets (never commit)
+.env
+frontend/.env
+
+# AWS SAM leftovers (not used, kept out just in case)
+.aws-sam/
+
+# OS / editor noise
+.DS_Store
