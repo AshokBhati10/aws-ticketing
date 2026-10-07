@@ -225,47 +225,65 @@ Behavior: if the user does not exist yet, the script prints instructions
 already in `Agents`, it reports that; otherwise it adds them. The user must
 sign out/in afterwards for the new group to land in the id token.
 
-## Frontend hosting (S3 + CloudFront)
+## Frontend hosting (S3 static website only)
 
-The built Vue app can be hosted on AWS next to the existing backend:
+The built Vue app can be hosted on AWS next to the existing backend using S3
+Static Website Hosting — no CloudFront (kept minimal for this POC):
 
-- **New, separate resources** (additive in `infra/template.yaml`, created only
+- **New, separate resource** (additive in `infra/template.yaml`, created only
   when the `DeployedFrontendUrl` parameter is non-empty): `FrontendBucket`
-  (private S3, full public-access block — NOT the attachments bucket),
-  `CloudFrontOriginAccessControl` (SigV4), `FrontendBucketPolicy` (allows only
-  this CloudFront distribution), `FrontendDistribution` (HTTPS redirect,
-  `PriceClass_100`, `DefaultRootObject: index.html`, AWS-managed
-  `CachingDisabled` policy so deploys are never stale, 403/404 → `/index.html`
-  with 200 for Vue SPA routing on refresh/deep links).
-- Setting `DeployedFrontendUrl` also **appends** (never replaces) the URL to
-  the Cognito app client's callback/logout URLs and to the API Gateway and
-  attachments-bucket CORS origins. `http://localhost:5173` keeps working.
-- New stack outputs: `FrontendBucketName`, `FrontendDistributionId`,
-  `FrontendCloudFrontUrl`.
+  (S3, NOT the attachments bucket) with `WebsiteConfiguration`
+  (`IndexDocument: index.html`, `ErrorDocument: index.html` — the error
+  document gives Vue SPA routing fallback, so `/tickets/<id>` etc. serve
+  `index.html` on refresh/deep links, with HTTP 404 status) and a public-read
+  bucket policy (`s3:GetObject` on the bucket).
+- Setting `DeployedFrontendUrl` **appends** (never replaces) the URL to the
+  API Gateway and attachments-bucket CORS origins. `http://localhost:5173`
+  keeps working.
+- New stack outputs: `FrontendBucketName`, `FrontendWebsiteUrl`
+  (e.g. `http://my-bucket.s3-website-ap-southeast-2.amazonaws.com`).
+
+### IMPORTANT: HTTP-only trade-off (Cognito limitation)
+
+S3 website endpoints are **HTTP-only**. Amazon Cognito **requires HTTPS**
+callback URLs (except `http://localhost`, `http://127.0.0.1`, `http://[::1]`)
+— the Cognito API validates and rejects HTTP callbacks, which would roll back
+a stack update. The template therefore **never** adds the S3 website URL to
+the Cognito app client's callback/logout URLs (a `FrontendUrlIsHttps`
+condition guards the append; localhost entries are untouched).
+
+Consequence, accepted for this POC: **sign-in from the deployed S3 site will
+fail at Cognito with a redirect error.** Full login/customer/agent testing
+stays on `http://localhost:5173` (`npm run dev`). No CloudFront was added to
+work around this, per the architecture decision.
+
+Also note: if S3 Block Public Access is enabled at the **account** level, the
+public-read bucket policy update will fail — this is a personal account you
+control, so disable account-level block only for this purpose if needed.
 
 Deploy it with `scripts/deploy-frontend.ps1` (run from the repo root on
-Windows). It is self-driving and two-phase:
+Windows). It is self-driving and idempotent:
 
 ```powershell
-.\scripts\deploy-frontend.ps1 [-StackName aws-ticketing-poc] [-Region us-east-1] `
+.\scripts\deploy-frontend.ps1 [-StackName aws-ticketing-poc] [-Region ap-southeast-2] `
   [-ApiUrl <ApiUrl output>] [-CognitoDomain <CognitoDomain output>] [-CognitoClientId <UserPoolClientId output>]
 ```
 
-1. If the distribution does not exist yet, it first updates the stack with a
-   placeholder URL so the bucket + distribution are created (Phase A).
+1. If the website bucket does not exist yet, it first updates the stack with a
+   placeholder URL so the bucket is created (Phase A).
 2. It builds `frontend/` for production. Values come from
    `frontend/.env.production` when present, otherwise from the `-ApiUrl` /
    `-CognitoDomain` / `-CognitoClientId` parameters. The OAuth redirect
-   (`<cloudfront>/callback`) and logout (`<cloudfront>`) URIs are always
-   derived from the real CloudFront URL.
-3. It runs `aws s3 sync frontend/dist s3://<frontend-bucket> --delete` and a
-   CloudFront `/*` invalidation.
-4. It updates the stack's `DeployedFrontendUrl` to the real CloudFront URL
+   (`<website-url>/callback`) and logout (`<website-url>`) URIs are always
+   derived from the real S3 website URL.
+3. It runs `aws s3 sync frontend/dist s3://<frontend-bucket> --delete`.
+   (No invalidation step — there is no CDN in front of the bucket.)
+4. It updates the stack's `DeployedFrontendUrl` to the real website URL
    (re-sending the stack's current parameter values, overriding only that
-   one), which wires Cognito callbacks and CORS to the deployed origin.
+   one), which wires CORS to the deployed origin. Re-running only re-syncs.
 
-Cost: S3 storage/requests and CloudFront transfer for a few static files —
-well within Free Tier at POC scale; `PriceClass_100` keeps edge costs minimal.
+Cost: S3 storage/requests for a few static files — well within Free Tier at
+POC scale. No CloudFront, no other new services.
 
 ## Full deploy sequence (backend + hosted frontend)
 
@@ -276,8 +294,9 @@ COGNITO_DOMAIN_PREFIX=<unique> STAGING_BUCKET=<bucket> ./scripts/deploy.sh
 # 2. one-time agent bootstrap
 .\scripts\ensure-agent.ps1 -UserPoolId <UserPoolId output>
 
-# 3. hosted frontend
-.\scripts\deploy-frontend.ps1
+# 3. hosted frontend (S3 static website; HTTP-only — see note above)
+.\scripts\deploy-frontend.ps1 -Region <region>
 
-# 4. open the FrontendCloudFrontUrl output and sign in
+# 4. open the FrontendWebsiteUrl output to browse the deployed UI
+#    (sign-in works on http://localhost:5173, not on the HTTP website URL)
 ```

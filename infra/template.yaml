@@ -30,14 +30,20 @@ Parameters:
     Type: String
     Default: ""
     Description: >-
-      Public HTTPS URL of the deployed frontend
-      (e.g. https://d123abc.cloudfront.net). When set, the S3 + CloudFront
-      frontend-hosting resources are created and this URL is appended to the
-      Cognito callback/logout URLs and to the API/S3 CORS origins.
-      Leave empty for backend-only deployments.
+      Public URL of the deployed frontend
+      (e.g. http://my-bucket.s3-website-ap-southeast-2.amazonaws.com for S3
+      static website hosting). When set, the S3 static-website frontend bucket
+      is created and this URL is appended to the API/S3 CORS origins.
+      NOTE: Cognito only accepts HTTPS callback URLs (except localhost), so an
+      HTTP S3 website URL is NEVER added to the Cognito callback/logout URLs —
+      login from the deployed site will not work; use http://localhost:5173
+      for sign-in. Leave empty for backend-only deployments.
 
 Conditions:
   HasDeployedFrontendUrl: !Not [!Equals [!Ref DeployedFrontendUrl, ""]]
+  # Cognito rejects non-HTTPS callback URLs (localhost excepted), so the
+  # deployed URL is only ever sent to Cognito when it uses https.
+  FrontendUrlIsHttps: !Equals [!Select ["0", !Split ["://", !Ref DeployedFrontendUrl]], "https"]
 
 Resources:
   # ---------------- Cognito ----------------
@@ -80,10 +86,10 @@ Resources:
         - profile
       CallbackURLs:
         - !Sub "${FrontendUrl}/callback"
-        - !If [HasDeployedFrontendUrl, !Sub "${DeployedFrontendUrl}/callback", !Ref "AWS::NoValue"]
+        - !If [FrontendUrlIsHttps, !Sub "${DeployedFrontendUrl}/callback", !Ref "AWS::NoValue"]
       LogoutURLs:
         - !Ref FrontendUrl
-        - !If [HasDeployedFrontendUrl, !Ref DeployedFrontendUrl, !Ref "AWS::NoValue"]
+        - !If [FrontendUrlIsHttps, !Ref DeployedFrontendUrl, !Ref "AWS::NoValue"]
       SupportedIdentityProviders:
         - COGNITO
       ExplicitAuthFlows:
@@ -176,29 +182,29 @@ Resources:
               - "*"
             MaxAge: 3000
 
-  # ---------------- Frontend hosting (S3 + CloudFront) ----------------
+  # ---------------- Frontend hosting (S3 static website) ----------------
   # Additive only: created only when DeployedFrontendUrl is set. The existing
   # attachments bucket above is untouched; this is a SEPARATE bucket.
+  # NOTE: S3 website endpoints are HTTP-only (no CloudFront in this design,
+  # per the POC cost/simplicity decision). Cognito requires HTTPS callbacks,
+  # so the website URL is deliberately NOT added to the Cognito app client —
+  # sign-in keeps working on http://localhost:5173.
   FrontendBucket:
     Type: AWS::S3::Bucket
     Condition: HasDeployedFrontendUrl
     Properties:
       BucketName: !Sub "${ProjectName}-frontend-${AWS::AccountId}"
+      # ErrorDocument: index.html gives Vue SPA routing fallback
+      # (/tickets/<id> etc. serve index.html; S3 returns HTTP 404 status).
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
-        BlockPublicPolicy: true
         IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-
-  CloudFrontOriginAccessControl:
-    Type: AWS::CloudFront::OriginAccessControl
-    Condition: HasDeployedFrontendUrl
-    Properties:
-      OriginAccessControlConfig:
-        Name: !Sub "${ProjectName}-frontend-oac"
-        OriginAccessControlOriginType: s3
-        SigningBehavior: always
-        SigningProtocol: sigv4
+        # Public bucket POLICY must be allowed for static website hosting.
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
 
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -209,50 +215,9 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
+            Principal: "*"
             Action: s3:GetObject
             Resource: !Sub "${FrontendBucket.Arn}/*"
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}"
-
-  FrontendDistribution:
-    Type: AWS::CloudFront::Distribution
-    Condition: HasDeployedFrontendUrl
-    Properties:
-      DistributionConfig:
-        Enabled: true
-        Comment: !Sub "${ProjectName} frontend"
-        DefaultRootObject: index.html
-        PriceClass: PriceClass_100
-        Origins:
-          - Id: frontend-s3-origin
-            DomainName: !GetAtt FrontendBucket.RegionalDomainName
-            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
-        DefaultCacheBehavior:
-          TargetOriginId: frontend-s3-origin
-          ViewerProtocolPolicy: redirect-to-https
-          Compress: true
-          AllowedMethods:
-            - GET
-            - HEAD
-            - OPTIONS
-          CachedMethods:
-            - GET
-            - HEAD
-          # AWS-managed CachingDisabled policy: every request hits the origin,
-          # so a fresh index.html is always served after each deploy.
-          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-        # SPA fallback: Vue client-side routes (/tickets, /tickets/:id, …)
-        # must serve index.html on refresh / deep links.
-        CustomErrorResponses:
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
 
   # ---------------- Lambda ----------------
   LambdaRole:
@@ -453,11 +418,10 @@ Outputs:
     Condition: HasDeployedFrontendUrl
     Description: S3 bucket hosting the built frontend
     Value: !Ref FrontendBucket
-  FrontendDistributionId:
+  FrontendWebsiteUrl:
     Condition: HasDeployedFrontendUrl
-    Description: CloudFront distribution ID for the frontend
-    Value: !Ref FrontendDistribution
-  FrontendCloudFrontUrl:
-    Condition: HasDeployedFrontendUrl
-    Description: Public HTTPS URL of the deployed frontend
-    Value: !Sub "https://${FrontendDistribution.DomainName}"
+    Description: >-
+      Public HTTP URL of the deployed frontend (S3 static website endpoint).
+      HTTP-only by design (no CloudFront); Cognito sign-in does not work from
+      this URL — use http://localhost:5173 for login.
+    Value: !GetAtt FrontendBucket.WebsiteURL
