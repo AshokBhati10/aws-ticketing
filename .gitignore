@@ -10,6 +10,8 @@ frontend/dist/
 # Environment / secrets (never commit)
 .env
 frontend/.env
+frontend/.env.production
+frontend/.env.local
 
 # AWS SAM leftovers (not used, kept out just in case)
 .aws-sam/

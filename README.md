@@ -172,3 +172,112 @@ detail/comments = `Get`/`Query` by key. Updates use read-modify-write via
   `vite build` succeeds; 36/36 backend unit tests pass against in-memory
   DynamoDB/S3 fakes; `infra/template.yaml` passes `cfn-lint` with zero errors.
   Deploy with `scripts/deploy.sh` and walk the customer/agent flows to confirm.
+
+## UI overview
+
+The frontend is a SaaS-style helpdesk dashboard (Vue 3 + Tailwind CSS v4, no
+extra UI libraries):
+
+- **App shell** (`src/App.vue`): slim left sidebar + top bar + workspace.
+  The sidebar is role-aware and drives the dashboard purely through URL query
+  params — no new backend functionality. Agents see Dashboard, All Tickets,
+  My Tickets, Unassigned, Open, In Progress, Resolved plus a Categories section
+  derived from loaded tickets; customers see a simplified set. `?status=`
+  maps to the existing API `?status=` filter; `?view=mine` / `?view=unassigned`
+  / `?category=` are applied client-side after the API response. On mobile the
+  sidebar hides behind a hamburger toggle.
+- **Dashboard** (`src/views/TicketList.vue`): stat cards (Total, Open,
+  In Progress, Resolved) computed from a real unfiltered `GET /tickets`
+  response — never hardcoded; client-side search over title/category applied
+  after the API status/priority filters; table with short ticket ID, title,
+  status/priority badges, category, assignee avatar, updated time; rows open
+  the detail page.
+- **Ticket detail**: header with badges, info card, agent-only management
+  section (rendered only when the Cognito `Agents` group role is `agent`),
+  activity timeline, comments, and attachment download cards.
+- **Create ticket**: same fields and the same S3 presigned-URL upload flow
+  (10MB-per-file limit enforced client-side and server-side); selected files
+  render as file cards; success navigates to the new ticket.
+- **Login**: branded page that still just calls the existing PKCE `login()`
+  redirect to the Cognito Hosted UI — no custom auth. The top bar always shows
+  the current role (**Agent**/**Customer**) derived from `cognito:groups`.
+
+A small Tailwind `@layer components` design system lives in
+`src/style.css` (`.btn`, `.card`, `.badge-*`, `.input/.select/.textarea`,
+`.tbl`, `.nav-link`, `.empty-state`, `.spinner`, `.alert-*`).
+
+## Agent bootstrap (one-time)
+
+`scripts/ensure-agent.ps1` (PowerShell — the team runs Windows) idempotently
+ensures a user belongs to the Cognito `Agents` group. The app keeps deriving
+the role from the `cognito:groups` JWT claim, so this is the only setup step;
+there is no frontend role switcher and no password handling anywhere.
+
+```powershell
+# after deploying the backend, with the UserPoolId stack output:
+.\scripts\ensure-agent.ps1 -UserPoolId <UserPoolId>
+# optional: -Email someone@example.com -Region eu-west-1
+# default email: ashok.fun99@gmail.com ; default region: us-east-1
+```
+
+Behavior: if the user does not exist yet, the script prints instructions
+(sign up once via the app's Hosted UI, then re-run) and creates nothing; if
+already in `Agents`, it reports that; otherwise it adds them. The user must
+sign out/in afterwards for the new group to land in the id token.
+
+## Frontend hosting (S3 + CloudFront)
+
+The built Vue app can be hosted on AWS next to the existing backend:
+
+- **New, separate resources** (additive in `infra/template.yaml`, created only
+  when the `DeployedFrontendUrl` parameter is non-empty): `FrontendBucket`
+  (private S3, full public-access block — NOT the attachments bucket),
+  `CloudFrontOriginAccessControl` (SigV4), `FrontendBucketPolicy` (allows only
+  this CloudFront distribution), `FrontendDistribution` (HTTPS redirect,
+  `PriceClass_100`, `DefaultRootObject: index.html`, AWS-managed
+  `CachingDisabled` policy so deploys are never stale, 403/404 → `/index.html`
+  with 200 for Vue SPA routing on refresh/deep links).
+- Setting `DeployedFrontendUrl` also **appends** (never replaces) the URL to
+  the Cognito app client's callback/logout URLs and to the API Gateway and
+  attachments-bucket CORS origins. `http://localhost:5173` keeps working.
+- New stack outputs: `FrontendBucketName`, `FrontendDistributionId`,
+  `FrontendCloudFrontUrl`.
+
+Deploy it with `scripts/deploy-frontend.ps1` (run from the repo root on
+Windows). It is self-driving and two-phase:
+
+```powershell
+.\scripts\deploy-frontend.ps1 [-StackName aws-ticketing-poc] [-Region us-east-1] `
+  [-ApiUrl <ApiUrl output>] [-CognitoDomain <CognitoDomain output>] [-CognitoClientId <UserPoolClientId output>]
+```
+
+1. If the distribution does not exist yet, it first updates the stack with a
+   placeholder URL so the bucket + distribution are created (Phase A).
+2. It builds `frontend/` for production. Values come from
+   `frontend/.env.production` when present, otherwise from the `-ApiUrl` /
+   `-CognitoDomain` / `-CognitoClientId` parameters. The OAuth redirect
+   (`<cloudfront>/callback`) and logout (`<cloudfront>`) URIs are always
+   derived from the real CloudFront URL.
+3. It runs `aws s3 sync frontend/dist s3://<frontend-bucket> --delete` and a
+   CloudFront `/*` invalidation.
+4. It updates the stack's `DeployedFrontendUrl` to the real CloudFront URL
+   (re-sending the stack's current parameter values, overriding only that
+   one), which wires Cognito callbacks and CORS to the deployed origin.
+
+Cost: S3 storage/requests and CloudFront transfer for a few static files —
+well within Free Tier at POC scale; `PriceClass_100` keeps edge costs minimal.
+
+## Full deploy sequence (backend + hosted frontend)
+
+```powershell
+# 1. backend (bash/WSL/Git-Bash; or translate to the PowerShell equivalents)
+COGNITO_DOMAIN_PREFIX=<unique> STAGING_BUCKET=<bucket> ./scripts/deploy.sh
+
+# 2. one-time agent bootstrap
+.\scripts\ensure-agent.ps1 -UserPoolId <UserPoolId output>
+
+# 3. hosted frontend
+.\scripts\deploy-frontend.ps1
+
+# 4. open the FrontendCloudFrontUrl output and sign in
+```

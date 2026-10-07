@@ -1,117 +1,201 @@
 <template>
-  <TopBar />
-  <main class="max-w-4xl mx-auto px-4 py-6">
-    <router-link to="/" class="text-sm text-indigo-600 hover:underline">← Back to tickets</router-link>
-    <p v-if="error" class="text-red-600 mt-4">{{ error }}</p>
-    <p v-else-if="loading" class="text-gray-500 mt-4">Loading…</p>
+  <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-5xl w-full mx-auto">
+    <router-link
+      to="/"
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-5"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to tickets
+    </router-link>
 
-    <div v-else-if="ticket" class="mt-4 space-y-6">
-      <!-- Ticket information -->
-      <section class="bg-white rounded shadow p-6">
-        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-          <h1 class="text-xl font-bold">{{ ticket.title }}</h1>
-          <div class="flex gap-2">
-            <Badge type="status" :value="ticket.status" />
-            <Badge type="priority" :value="ticket.priority" />
-          </div>
+    <div v-if="error" class="alert-error">{{ error }}</div>
+
+    <div v-else-if="loading" class="space-y-4">
+      <div class="skeleton-row h-8 w-2/3"></div>
+      <div class="card-pad space-y-3">
+        <div class="skeleton-row h-4 w-full"></div>
+        <div class="skeleton-row h-4 w-5/6"></div>
+        <div class="skeleton-row h-4 w-4/6"></div>
+      </div>
+    </div>
+
+    <div v-else-if="ticket" class="space-y-5">
+      <!-- Header -->
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="text-2xl font-bold text-slate-900 break-words">{{ ticket.title }}</h1>
+          <p class="text-xs font-mono text-slate-400 mt-1">#{{ ticket.ticketId }}</p>
         </div>
-        <p class="text-gray-700 whitespace-pre-wrap mb-4">{{ ticket.description }}</p>
-        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-          <div><dt class="text-gray-500">Category</dt><dd class="font-medium">{{ ticket.category }}</dd></div>
-          <div><dt class="text-gray-500">Assignee</dt><dd class="font-medium">{{ ticket.assignee || "Unassigned" }}</dd></div>
-          <div><dt class="text-gray-500">Customer</dt><dd class="font-medium">{{ ticket.customerEmail }}</dd></div>
-          <div><dt class="text-gray-500">Created</dt><dd class="font-medium">{{ formatDate(ticket.createdAt) }}</dd></div>
-          <div><dt class="text-gray-500">Updated</dt><dd class="font-medium">{{ formatDate(ticket.updatedAt) }}</dd></div>
-          <div><dt class="text-gray-500">Ticket ID</dt><dd class="font-mono text-xs break-all">{{ ticket.ticketId }}</dd></div>
+        <div class="flex gap-2 shrink-0">
+          <Badge type="status" :value="ticket.status" />
+          <Badge type="priority" :value="ticket.priority" />
+        </div>
+      </div>
+
+      <!-- Ticket information -->
+      <section class="card-pad">
+        <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
+          Ticket information
+        </h2>
+        <p class="text-slate-700 whitespace-pre-wrap mb-6">{{ ticket.description }}</p>
+        <dl class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+          <div>
+            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Category</dt>
+            <dd class="font-medium text-slate-900">{{ ticket.category }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Customer</dt>
+            <dd class="font-medium text-slate-900 break-all">{{ ticket.customerEmail }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Assignee</dt>
+            <dd class="font-medium text-slate-900">
+              <span v-if="ticket.assignee" class="inline-flex items-center gap-1.5">
+                <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold inline-flex items-center justify-center">
+                  {{ ticket.assignee.charAt(0).toUpperCase() }}
+                </span>
+                <span class="break-all">{{ ticket.assignee }}</span>
+              </span>
+              <span v-else class="text-slate-400 italic font-normal">Unassigned</span>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Created</dt>
+            <dd class="font-medium text-slate-900">{{ formatDate(ticket.createdAt) }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Last updated</dt>
+            <dd class="font-medium text-slate-900">{{ formatDate(ticket.updatedAt) }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Status</dt>
+            <dd><Badge type="status" :value="ticket.status" /></dd>
+          </div>
         </dl>
-        <div v-if="ticket.attachments && ticket.attachments.length" class="mt-4">
-          <h3 class="text-sm font-medium mb-2">Attachments</h3>
-          <ul class="text-sm space-y-1">
+
+        <div v-if="ticket.attachments && ticket.attachments.length" class="mt-6 pt-6 border-t border-slate-100">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">
+            Attachments <span class="text-slate-400 font-normal">({{ ticket.attachments.length }})</span>
+          </h3>
+          <ul class="grid sm:grid-cols-2 gap-2">
             <li v-for="a in ticket.attachments" :key="a.key">
-              <a :href="a.downloadUrl" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">
-                {{ a.fileName }}
+              <a :href="a.downloadUrl" target="_blank" rel="noopener" class="file-card hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors">
+                <svg class="w-8 h-8 text-indigo-500 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="min-w-0">
+                  <span class="block font-medium text-slate-800 truncate" :title="a.fileName">{{ a.fileName }}</span>
+                  <span class="text-xs text-slate-500">{{ formatSize(a.size) }}</span>
+                </span>
               </a>
-              <span class="text-gray-500"> ({{ Math.round((a.size || 0) / 1024) }} KB)</span>
             </li>
           </ul>
         </div>
       </section>
 
-      <!-- Status / assignee management -->
-      <section class="bg-white rounded shadow p-6">
-        <h2 class="font-bold mb-3">Manage ticket</h2>
-        <p v-if="saveError" class="text-red-600 text-sm mb-2">{{ saveError }}</p>
-        <p v-if="saveOk" class="text-green-600 text-sm mb-2">Saved.</p>
-        <div class="flex flex-wrap items-end gap-3">
-          <label class="text-sm">
-            <span class="block text-gray-500 mb-1">Status</span>
-            <select v-model="manage.status" class="border rounded px-3 py-2">
+      <!-- Agent management (agents only) -->
+      <section v-if="isAgent" class="card-pad">
+        <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
+          Manage ticket
+        </h2>
+        <p v-if="saveError" class="alert-error mb-3">{{ saveError }}</p>
+        <p v-if="saveOk" class="alert-success mb-3">Ticket updated.</p>
+        <div class="flex flex-col sm:flex-row sm:items-end gap-4">
+          <div class="sm:w-56">
+            <label class="field-label" for="mgmt-status">Status</label>
+            <select id="mgmt-status" v-model="manage.status" class="select w-full">
               <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
             </select>
-          </label>
-          <label class="text-sm">
-            <span class="block text-gray-500 mb-1">Assignee</span>
-            <input v-model="manage.assignee" placeholder="e.g. agent@example.com"
-              class="border rounded px-3 py-2 w-64" />
-          </label>
-          <button @click="saveManagement" :disabled="saving"
-            class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50">
-            {{ saving ? "Saving…" : "Save" }}
+          </div>
+          <div class="flex-1">
+            <label class="field-label" for="mgmt-assignee">Assignee</label>
+            <input
+              id="mgmt-assignee"
+              v-model="manage.assignee"
+              placeholder="e.g. agent@example.com"
+              class="input"
+            />
+          </div>
+          <button @click="saveManagement" :disabled="saving" class="btn btn-primary sm:w-auto w-full">
+            <span v-if="saving" class="spinner !w-4 !h-4 !border-white/40 !border-t-white"></span>
+            {{ saving ? "Saving…" : "Save changes" }}
           </button>
         </div>
       </section>
 
-      <!-- Activity timeline -->
-      <section class="bg-white rounded shadow p-6">
-        <h2 class="font-bold mb-3">Activity</h2>
-        <ol v-if="activity.length" class="space-y-3">
-          <li v-for="(a, i) in activity" :key="i" class="flex gap-3 text-sm">
-            <div class="flex flex-col items-center">
-              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mt-1.5"></span>
-              <span v-if="i < activity.length - 1" class="w-px flex-1 bg-gray-200"></span>
-            </div>
-            <div>
-              <p class="font-medium">{{ actionLabel(a.action) }}</p>
-              <p v-if="a.detail" class="text-gray-600">{{ a.detail }}</p>
-              <p class="text-gray-400 text-xs">{{ a.byEmail }} · {{ formatDate(a.at) }}</p>
-            </div>
-          </li>
-        </ol>
-        <p v-else class="text-gray-500 text-sm">No activity yet.</p>
-      </section>
+      <div class="grid lg:grid-cols-2 gap-5 items-start">
+        <!-- Activity timeline -->
+        <section class="card-pad">
+          <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">Activity</h2>
+          <ol v-if="activity.length" class="space-y-4">
+            <li v-for="(a, i) in activity" :key="i" class="flex gap-3 text-sm">
+              <div class="flex flex-col items-center">
+                <span class="timeline-dot"></span>
+                <span v-if="i < activity.length - 1" class="timeline-line"></span>
+              </div>
+              <div class="min-w-0 pb-1">
+                <p class="font-semibold text-slate-800">{{ actionLabel(a.action) }}</p>
+                <p v-if="a.detail" class="text-slate-600 mt-0.5 break-words">{{ a.detail }}</p>
+                <p class="text-slate-400 text-xs mt-1 break-all">{{ a.byEmail }} · {{ formatDate(a.at) }}</p>
+              </div>
+            </li>
+          </ol>
+          <p v-else class="text-slate-500 text-sm">No activity yet.</p>
+        </section>
 
-      <!-- Comments -->
-      <section class="bg-white rounded shadow p-6">
-        <h2 class="font-bold mb-3">Comments</h2>
-        <div v-if="comments.length" class="space-y-4 mb-4">
-          <div v-for="c in comments" :key="c.commentId" class="border rounded p-3">
-            <p class="text-sm whitespace-pre-wrap">{{ c.text }}</p>
-            <p class="text-xs text-gray-500 mt-1">
-              {{ c.authorEmail }} ({{ c.authorRole }}) · {{ formatDate(c.createdAt) }}
-            </p>
+        <!-- Comments -->
+        <section class="card-pad">
+          <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
+            Comments <span class="text-slate-400 font-normal">({{ comments.length }})</span>
+          </h2>
+          <div v-if="comments.length" class="space-y-3 mb-5 max-h-96 overflow-y-auto pr-1">
+            <div v-for="c in comments" :key="c.commentId" class="border border-slate-200 rounded-lg p-3.5 bg-slate-50/60">
+              <p class="text-sm text-slate-800 whitespace-pre-wrap break-words">{{ c.text }}</p>
+              <p class="text-xs text-slate-500 mt-2 flex flex-wrap items-center gap-1.5">
+                <span class="font-medium text-slate-600 break-all">{{ c.authorEmail }}</span>
+                <span
+                  class="badge"
+                  :class="c.authorRole === 'agent' ? 'badge-role-agent' : 'badge-role-customer'"
+                  style="font-size: 10px"
+                >
+                  {{ c.authorRole }}
+                </span>
+                <span class="text-slate-400">· {{ formatDate(c.createdAt) }}</span>
+              </p>
+            </div>
           </div>
-        </div>
-        <p v-else class="text-gray-500 text-sm mb-4">No comments yet.</p>
-        <p v-if="commentError" class="text-red-600 text-sm mb-2">{{ commentError }}</p>
-        <textarea v-model="newComment" rows="3" placeholder="Write a comment…"
-          class="w-full border rounded px-3 py-2 text-sm mb-2"></textarea>
-        <button @click="addComment" :disabled="commenting || !newComment.trim()"
-          class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50">
-          {{ commenting ? "Adding…" : "Add comment" }}
-        </button>
-      </section>
+          <p v-else class="text-slate-500 text-sm mb-4">No comments yet. Start the conversation below.</p>
+          <p v-if="commentError" class="alert-error mb-3">{{ commentError }}</p>
+          <textarea
+            v-model="newComment"
+            rows="3"
+            placeholder="Write a comment…"
+            class="textarea mb-3"
+          ></textarea>
+          <button
+            @click="addComment"
+            :disabled="commenting || !newComment.trim()"
+            class="btn btn-primary w-full sm:w-auto"
+          >
+            {{ commenting ? "Adding…" : "Add comment" }}
+          </button>
+        </section>
+      </div>
     </div>
   </main>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
-import TopBar from "../components/TopBar.vue";
 import Badge from "../components/Badge.vue";
 import { api } from "../lib/api.js";
+import { getRole } from "../lib/auth.js";
 
 const props = defineProps({ id: String });
 const statuses = ["open", "in-progress", "resolved", "closed"];
+const isAgent = getRole() === "agent";
 
 const ticket = ref(null);
 const comments = ref([]);
@@ -135,6 +219,11 @@ function formatDate(iso) {
   } catch {
     return iso;
   }
+}
+
+function formatSize(bytes) {
+  const kb = Math.round((bytes || 0) / 1024);
+  return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
 }
 
 function actionLabel(action) {

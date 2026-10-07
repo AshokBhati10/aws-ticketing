@@ -26,6 +26,18 @@ Parameters:
   LambdaCodeKey:
     Type: String
     Description: S3 key of the packaged Lambda zip.
+  DeployedFrontendUrl:
+    Type: String
+    Default: ""
+    Description: >-
+      Public HTTPS URL of the deployed frontend
+      (e.g. https://d123abc.cloudfront.net). When set, the S3 + CloudFront
+      frontend-hosting resources are created and this URL is appended to the
+      Cognito callback/logout URLs and to the API/S3 CORS origins.
+      Leave empty for backend-only deployments.
+
+Conditions:
+  HasDeployedFrontendUrl: !Not [!Equals [!Ref DeployedFrontendUrl, ""]]
 
 Resources:
   # ---------------- Cognito ----------------
@@ -68,8 +80,10 @@ Resources:
         - profile
       CallbackURLs:
         - !Sub "${FrontendUrl}/callback"
+        - !If [HasDeployedFrontendUrl, !Sub "${DeployedFrontendUrl}/callback", !Ref "AWS::NoValue"]
       LogoutURLs:
         - !Ref FrontendUrl
+        - !If [HasDeployedFrontendUrl, !Ref DeployedFrontendUrl, !Ref "AWS::NoValue"]
       SupportedIdentityProviders:
         - COGNITO
       ExplicitAuthFlows:
@@ -154,12 +168,91 @@ Resources:
         CorsRules:
           - AllowedOrigins:
               - !Ref FrontendUrl
+              - !If [HasDeployedFrontendUrl, !Ref DeployedFrontendUrl, !Ref "AWS::NoValue"]
             AllowedMethods:
               - GET
               - PUT
             AllowedHeaders:
               - "*"
             MaxAge: 3000
+
+  # ---------------- Frontend hosting (S3 + CloudFront) ----------------
+  # Additive only: created only when DeployedFrontendUrl is set. The existing
+  # attachments bucket above is untouched; this is a SEPARATE bucket.
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Condition: HasDeployedFrontendUrl
+    Properties:
+      BucketName: !Sub "${ProjectName}-frontend-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Condition: HasDeployedFrontendUrl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${ProjectName}-frontend-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: HasDeployedFrontendUrl
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}"
+
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: HasDeployedFrontendUrl
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "${ProjectName} frontend"
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: frontend-s3-origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+        DefaultCacheBehavior:
+          TargetOriginId: frontend-s3-origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          # AWS-managed CachingDisabled policy: every request hits the origin,
+          # so a fresh index.html is always served after each deploy.
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+        # SPA fallback: Vue client-side routes (/tickets, /tickets/:id, …)
+        # must serve index.html on refresh / deep links.
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
 
   # ---------------- Lambda ----------------
   LambdaRole:
@@ -230,6 +323,7 @@ Resources:
       CorsConfiguration:
         AllowOrigins:
           - !Ref FrontendUrl
+          - !If [HasDeployedFrontendUrl, !Ref DeployedFrontendUrl, !Ref "AWS::NoValue"]
         AllowMethods:
           - "*"
         AllowHeaders:
@@ -355,3 +449,15 @@ Outputs:
     Value: !Ref TicketsTable
   CommentsTableName:
     Value: !Ref CommentsTable
+  FrontendBucketName:
+    Condition: HasDeployedFrontendUrl
+    Description: S3 bucket hosting the built frontend
+    Value: !Ref FrontendBucket
+  FrontendDistributionId:
+    Condition: HasDeployedFrontendUrl
+    Description: CloudFront distribution ID for the frontend
+    Value: !Ref FrontendDistribution
+  FrontendCloudFrontUrl:
+    Condition: HasDeployedFrontendUrl
+    Description: Public HTTPS URL of the deployed frontend
+    Value: !Sub "https://${FrontendDistribution.DomainName}"

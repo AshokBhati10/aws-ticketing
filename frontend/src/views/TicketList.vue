@@ -1,83 +1,283 @@
 <template>
-  <TopBar />
-  <main class="max-w-6xl mx-auto px-4 py-6">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 class="text-xl font-bold">Tickets</h1>
-      <router-link
-        to="/tickets/new"
-        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-      >
+  <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto">
+    <!-- Page header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">{{ pageTitle }}</h1>
+        <p class="text-sm text-slate-500 mt-1">{{ pageDescription }}</p>
+      </div>
+      <router-link to="/tickets/new" class="btn btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
         New ticket
       </router-link>
     </div>
 
-    <div class="flex flex-wrap gap-3 mb-4">
-      <label class="flex items-center gap-2 text-sm">
-        Status
-        <select v-model="filters.status" @change="load" class="border rounded px-2 py-1.5">
-          <option value="">All</option>
-          <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
-        </select>
-      </label>
-      <label class="flex items-center gap-2 text-sm">
-        Priority
-        <select v-model="filters.priority" @change="load" class="border rounded px-2 py-1.5">
-          <option value="">All</option>
-          <option v-for="p in priorities" :key="p" :value="p">{{ p }}</option>
-        </select>
-      </label>
+    <!-- Statistics -->
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div class="stat-card">
+        <span class="stat-icon bg-indigo-100 text-indigo-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+          </svg>
+        </span>
+        <div>
+          <p class="stat-value">{{ statsLoading ? "–" : stats.total }}</p>
+          <p class="stat-label">Total tickets</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon bg-amber-100 text-amber-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <div>
+          <p class="stat-value">{{ statsLoading ? "–" : stats.open }}</p>
+          <p class="stat-label">Open</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon bg-blue-100 text-blue-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <div>
+          <p class="stat-value">{{ statsLoading ? "–" : stats.inProgress }}</p>
+          <p class="stat-label">In progress</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon bg-emerald-100 text-emerald-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <div>
+          <p class="stat-value">{{ statsLoading ? "–" : stats.resolved }}</p>
+          <p class="stat-label">Resolved</p>
+        </div>
+      </div>
     </div>
 
-    <p v-if="error" class="text-red-600 mb-4">{{ error }}</p>
-    <p v-else-if="loading" class="text-gray-500">Loading…</p>
-    <p v-else-if="tickets.length === 0" class="text-gray-500">No tickets found.</p>
-
-    <div v-else class="bg-white rounded shadow overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="bg-gray-100 text-left">
-            <th class="px-4 py-2">Title</th>
-            <th class="px-4 py-2">Status</th>
-            <th class="px-4 py-2">Priority</th>
-            <th class="px-4 py-2">Category</th>
-            <th class="px-4 py-2">Assignee</th>
-            <th class="px-4 py-2">Updated</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="t in tickets"
-            :key="t.ticketId"
-            class="border-t hover:bg-gray-50 cursor-pointer"
-            @click="$router.push(`/tickets/${t.ticketId}`)"
+    <!-- Search + filters -->
+    <div class="card p-4 mb-4">
+      <div class="flex flex-col md:flex-row md:items-center gap-3">
+        <div class="relative flex-1">
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            v-model="search"
+            type="search"
+            placeholder="Search by title or category…"
+            class="input pl-9"
+          />
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="flex items-center gap-2 text-sm text-slate-600">
+            Status
+            <select v-model="filters.status" @change="onFilterChange" class="select">
+              <option value="">All</option>
+              <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-2 text-sm text-slate-600">
+            Priority
+            <select v-model="filters.priority" @change="load" class="select">
+              <option value="">All</option>
+              <option v-for="p in priorities" :key="p" :value="p">{{ p }}</option>
+            </select>
+          </label>
+          <button
+            v-if="hasActiveFilters"
+            @click="clearFilters"
+            class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
           >
-            <td class="px-4 py-2 font-medium text-indigo-700">{{ t.title }}</td>
-            <td class="px-4 py-2"><Badge type="status" :value="t.status" /></td>
-            <td class="px-4 py-2"><Badge type="priority" :value="t.priority" /></td>
-            <td class="px-4 py-2">{{ t.category }}</td>
-            <td class="px-4 py-2">{{ t.assignee || "—" }}</td>
-            <td class="px-4 py-2 text-gray-500">{{ formatDate(t.updatedAt) }}</td>
-          </tr>
-        </tbody>
-      </table>
+            Clear filters
+          </button>
+        </div>
+      </div>
+      <p v-if="activeViewLabel" class="text-xs text-slate-500 mt-3">
+        Showing: <span class="font-semibold text-slate-700">{{ activeViewLabel }}</span>
+      </p>
     </div>
-    <p v-if="!loading" class="text-sm text-gray-500 mt-2">{{ tickets.length }} ticket(s)</p>
+
+    <!-- Table -->
+    <div class="card overflow-hidden">
+      <div v-if="error" class="p-6"><p class="alert-error">{{ error }}</p></div>
+
+      <div v-else-if="loading" class="p-6 space-y-3">
+        <div v-for="i in 5" :key="i" class="skeleton-row h-12"></div>
+      </div>
+
+      <div v-else-if="displayedTickets.length === 0" class="empty-state">
+        <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+        </svg>
+        <p class="empty-state-title">No tickets found</p>
+        <p class="empty-state-text">
+          {{ hasActiveFilters ? "Try adjusting your search or filters." : "Create your first ticket to get started." }}
+        </p>
+        <router-link v-if="!hasActiveFilters" to="/tickets/new" class="btn btn-primary mt-4">
+          New ticket
+        </router-link>
+      </div>
+
+      <div v-else class="overflow-x-auto">
+        <table class="tbl min-w-[760px]">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Category</th>
+              <th>Assignee</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="t in displayedTickets"
+              :key="t.ticketId"
+              class="clickable"
+              @click="$router.push(`/tickets/${t.ticketId}`)"
+            >
+              <td class="font-mono text-xs text-slate-500 whitespace-nowrap">#{{ shortId(t.ticketId) }}</td>
+              <td class="font-medium text-slate-900 max-w-64">
+                <span class="block truncate" :title="t.title">{{ t.title }}</span>
+              </td>
+              <td><Badge type="status" :value="t.status" /></td>
+              <td><Badge type="priority" :value="t.priority" /></td>
+              <td class="text-slate-600 whitespace-nowrap">{{ t.category }}</td>
+              <td class="whitespace-nowrap">
+                <span v-if="t.assignee" class="inline-flex items-center gap-1.5 text-sm text-slate-700">
+                  <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center">
+                    {{ t.assignee.charAt(0).toUpperCase() }}
+                  </span>
+                  <span class="truncate max-w-40" :title="t.assignee">{{ t.assignee }}</span>
+                </span>
+                <span v-else class="text-xs text-slate-400 italic">Unassigned</span>
+              </td>
+              <td class="text-slate-500 text-xs whitespace-nowrap">{{ formatDate(t.updatedAt) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p v-if="!loading && !error" class="text-xs text-slate-500 mt-3">
+      {{ displayedTickets.length }} of {{ tickets.length }} ticket(s)
+    </p>
   </main>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from "vue";
-import TopBar from "../components/TopBar.vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import Badge from "../components/Badge.vue";
 import { api } from "../lib/api.js";
+import { getRole, getUserEmail } from "../lib/auth.js";
+
+const emit = defineEmits(["categories"]);
+
+const route = useRoute();
+const router = useRouter();
+const role = getRole();
+const userEmail = getUserEmail();
 
 const statuses = ["open", "in-progress", "resolved", "closed"];
 const priorities = ["low", "medium", "high", "urgent"];
+
 const filters = reactive({ status: "", priority: "" });
-const tickets = ref([]);
+const search = ref("");
+const tickets = ref([]); // API-filtered (status/priority) ticket list for the table
+const statsTickets = ref([]); // unfiltered ticket list for the stat cards
 const loading = ref(true);
+const statsLoading = ref(true);
 const error = ref("");
 
+// ---- derived view state from the URL query (sidebar navigation) ----
+const view = computed(() => route.query.view || "");
+const categoryFilter = computed(() => route.query.category || "");
+
+const pageTitle = computed(() => {
+  if (view.value === "mine") return role === "agent" ? "My Tickets" : "Tickets";
+  if (view.value === "unassigned") return "Unassigned Tickets";
+  if (view.value === "all") return "All Tickets";
+  if (filters.status) return `${capitalize(filters.status)} Tickets`;
+  if (categoryFilter.value) return `${categoryFilter.value} Tickets`;
+  return role === "agent" ? "Dashboard" : "Tickets";
+});
+
+const pageDescription = computed(() =>
+  role === "agent"
+    ? "Track, assign and resolve every ticket in the queue."
+    : "View and manage your support tickets."
+);
+
+const activeViewLabel = computed(() => {
+  const parts = [];
+  if (view.value === "mine") parts.push(role === "agent" ? "assigned to me" : "my tickets");
+  if (view.value === "unassigned") parts.push("unassigned");
+  if (view.value === "all") parts.push("all tickets");
+  if (filters.status) parts.push(`status: ${filters.status}`);
+  if (filters.priority) parts.push(`priority: ${filters.priority}`);
+  if (categoryFilter.value) parts.push(`category: ${categoryFilter.value}`);
+  if (search.value.trim()) parts.push(`search: “${search.value.trim()}”`);
+  return parts.join(" · ");
+});
+
+const hasActiveFilters = computed(
+  () =>
+    !!filters.status ||
+    !!filters.priority ||
+    !!view.value ||
+    !!categoryFilter.value ||
+    !!search.value.trim()
+);
+
+// ---- statistics (computed from the unfiltered dataset, never hardcoded) ----
+const stats = computed(() => {
+  const all = statsTickets.value;
+  return {
+    total: all.length,
+    open: all.filter((t) => t.status === "open").length,
+    inProgress: all.filter((t) => t.status === "in-progress").length,
+    resolved: all.filter((t) => t.status === "resolved").length,
+  };
+});
+
+// ---- table rows: API filters first, then client-side view/category/search ----
+const displayedTickets = computed(() => {
+  let list = tickets.value;
+  if (view.value === "mine" && role === "agent") {
+    list = list.filter((t) => t.assignee === userEmail);
+  } else if (view.value === "unassigned") {
+    list = list.filter((t) => !t.assignee);
+  }
+  if (categoryFilter.value) {
+    list = list.filter((t) => t.category === categoryFilter.value);
+  }
+  const q = search.value.trim().toLowerCase();
+  if (q) {
+    list = list.filter(
+      (t) =>
+        (t.title || "").toLowerCase().includes(q) ||
+        (t.category || "").toLowerCase().includes(q)
+    );
+  }
+  return list;
+});
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function shortId(id) {
+  return (id || "").slice(0, 8);
+}
 function formatDate(iso) {
   try {
     return new Date(iso).toLocaleString();
@@ -86,11 +286,19 @@ function formatDate(iso) {
   }
 }
 
+function syncFiltersFromQuery() {
+  // Sidebar status links drive the API-level status filter.
+  filters.status = route.query.status || "";
+}
+
 async function load() {
   loading.value = true;
   error.value = "";
   try {
-    const data = await api.listTickets(filters);
+    const data = await api.listTickets({
+      status: filters.status,
+      priority: filters.priority,
+    });
     tickets.value = data.tickets || [];
   } catch (e) {
     error.value = e.message;
@@ -99,5 +307,46 @@ async function load() {
   }
 }
 
-onMounted(load);
+async function loadStats() {
+  statsLoading.value = true;
+  try {
+    const data = await api.listTickets({});
+    statsTickets.value = data.tickets || [];
+    const cats = [...new Set(statsTickets.value.map((t) => t.category).filter(Boolean))].sort();
+    emit("categories", cats);
+  } catch {
+    // Stats are best-effort; the table load surfaces real errors.
+  } finally {
+    statsLoading.value = false;
+  }
+}
+
+function onFilterChange() {
+  // Keep the URL as the source of truth for the status filter.
+  const query = { ...route.query };
+  if (filters.status) query.status = filters.status;
+  else delete query.status;
+  router.replace({ path: "/", query });
+}
+
+function clearFilters() {
+  search.value = "";
+  filters.priority = "";
+  filters.status = "";
+  router.replace({ path: "/" });
+}
+
+watch(
+  () => route.query,
+  () => {
+    syncFiltersFromQuery();
+    load();
+  }
+);
+
+onMounted(() => {
+  syncFiltersFromQuery();
+  load();
+  loadStats();
+});
 </script>
