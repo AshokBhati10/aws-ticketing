@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Self-driving deployment for the already-deployed backend stack. S3 static
-  website hosting ONLY — no CloudFront (kept minimal for this POC).
+  website hosting ONLY - no CloudFront (kept minimal for this POC).
     Phase A (only if the frontend website bucket does not exist yet):
       updates the CloudFormation stack with DeployedFrontendUrl="http://bootstrap.invalid"
       so the S3 static-website frontend bucket is created.
@@ -14,17 +14,17 @@
          -CognitoDomain and -CognitoClientId parameters. The OAuth redirect
          and logout URIs are derived from the real S3 website URL.
       2. Syncs frontend/dist/ to the frontend S3 bucket (--delete).
-         (No invalidation step — there is no CDN in front of the bucket.)
+         (No invalidation step - there is no CDN in front of the bucket.)
       3. Updates the stack's DeployedFrontendUrl parameter to the real
          S3 website URL so API/S3 CORS allow it (localhost entries preserved).
 
   Existing backend resources (Cognito pool/client, API Gateway, Lambda,
-  DynamoDB, attachments bucket) are not replaced — the stack update only
+  DynamoDB, attachments bucket) are not replaced - the stack update only
   adds/modifies the frontend-hosting pieces.
 
   IMPORTANT HTTP TRADE-OFF: S3 website endpoints are HTTP-only. Cognito
   requires HTTPS callback URLs (localhost excepted), so the website URL is
-  deliberately NEVER added to the Cognito app client — sign-in from the
+  deliberately NEVER added to the Cognito app client - sign-in from the
   deployed site will fail at Cognito. Full login testing stays on
   http://localhost:5173, which keeps working unchanged.
 
@@ -87,7 +87,7 @@ function Invoke-StackDeploy([string]$deployedFrontendUrl, [object]$stack) {
   $overrides = @()
   foreach ($k in $keys) {
     $v = Get-Param $stack $k
-    if ([string]::IsNullOrEmpty($v)) { throw "Current stack parameter '$k' is empty — cannot redeploy safely." }
+    if ([string]::IsNullOrEmpty($v)) { throw "Current stack parameter '$k' is empty - cannot redeploy safely." }
     $overrides += "$k=$v"
   }
   $overrides += "DeployedFrontendUrl=$deployedFrontendUrl"
@@ -108,7 +108,7 @@ $stack = Get-StackJson
 $websiteUrl = Get-Output $stack "FrontendWebsiteUrl"
 
 if ([string]::IsNullOrEmpty($websiteUrl)) {
-  Write-Host "Frontend website bucket not found — Phase A: creating S3 static-website bucket..."
+  Write-Host "Frontend website bucket not found - Phase A: creating S3 static-website bucket..."
   Invoke-StackDeploy "http://bootstrap.invalid" $stack
   $stack = Get-StackJson
   $websiteUrl = Get-Output $stack "FrontendWebsiteUrl"
@@ -138,7 +138,7 @@ $apiUrlVal = if ($ApiUrl) { $ApiUrl } elseif ($fileVars["VITE_API_URL"]) { $file
 $domainVal = if ($CognitoDomain) { $CognitoDomain } elseif ($fileVars["VITE_COGNITO_DOMAIN"]) { $fileVars["VITE_COGNITO_DOMAIN"] } else { throw "Missing Cognito domain. Pass -CognitoDomain or set VITE_COGNITO_DOMAIN in frontend/.env.production." }
 $clientIdVal = if ($CognitoClientId) { $CognitoClientId } elseif ($fileVars["VITE_COGNITO_CLIENT_ID"]) { $fileVars["VITE_COGNITO_CLIENT_ID"] } else { throw "Missing Cognito client ID. Pass -CognitoClientId or set VITE_COGNITO_CLIENT_ID in frontend/.env.production." }
 
-# Redirect URIs follow the deployed origin — environment wins over .env files in Vite.
+# Redirect URIs follow the deployed origin - environment wins over .env files in Vite.
 $env:VITE_API_URL = $apiUrlVal
 $env:VITE_COGNITO_DOMAIN = $domainVal
 $env:VITE_COGNITO_CLIENT_ID = $clientIdVal
@@ -171,7 +171,7 @@ if ($currentDeployed -ne $websiteUrl) {
   Write-Host "Wiring API/S3 CORS to $websiteUrl ..."
   Invoke-StackDeploy $websiteUrl $stack
 } else {
-  Write-Host "Stack already points at $websiteUrl — no update needed."
+  Write-Host "Stack already points at $websiteUrl - no update needed."
 }
 
 Write-Host ""
@@ -179,4 +179,4 @@ Write-Host "Done." -ForegroundColor Green
 Write-Host "Open the app at: $websiteUrl"
 Write-Host "NOTE: the S3 website endpoint is HTTP-only (no CloudFront in this design)."
 Write-Host "Cognito requires HTTPS callbacks, so sign-in from the deployed URL will"
-Write-Host "fail — use http://localhost:5173 (npm run dev) for full login testing."
+Write-Host "fail - use http://localhost:5173 (npm run dev) for full login testing."
