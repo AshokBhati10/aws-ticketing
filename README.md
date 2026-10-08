@@ -225,6 +225,51 @@ Behavior: if the user does not exist yet, the script prints instructions
 already in `Agents`, it reports that; otherwise it adds them. The user must
 sign out/in afterwards for the new group to land in the id token.
 
+## Demo: seeding 200 dummy tickets (optional)
+
+`scripts/seed-dummy-tickets.js` (Node.js, AWS SDK v3) inserts 200 realistic
+demo tickets into the existing DynamoDB tickets table for presentations. It
+creates **no infrastructure** and never touches Cognito users or groups: it
+only writes ticket records for a real customer sub you supply, using the exact
+ticket schema the backend writes (same fields, same status/priority values,
+same activity format). Agent users see the seeded tickets normally; customer
+isolation is unchanged.
+
+Setup (once):
+
+```bash
+cd scripts && npm install
+```
+
+Seed (PowerShell, from the repo root — use the real Cognito `sub` of your
+demo customer; find it in the Cognito console or from the app's id token):
+
+```bash
+node scripts/seed-dummy-tickets.js --customer-sub "<CUSTOMER_SUB>" --table "<TicketsTableName-output>"
+```
+
+Options: `--customer-email` (display only, default
+`demo.customer@example.com`), `--region` (default `ap-southeast-2`), `--table`
+or the `TICKETS_TABLE` env var (no default is guessed; get the name from the
+`TicketsTableName` stack output). Credentials come from your AWS CLI
+configuration — the script never accepts or stores secrets.
+
+Idempotency: ticket IDs are deterministic (`demo-seed-0001` … `demo-seed-0200`)
+and existing items are never overwritten. First run prints `200 created`;
+re-running prints `0 created, 200 already exist`. Use `--dry-run` to preview
+the generated tickets without any AWS calls.
+
+Cleanup (removes only the seeded dummy tickets):
+
+```bash
+node scripts/seed-dummy-tickets.js --cleanup --table "<TicketsTableName-output>"
+```
+
+> **Warning:** cleanup deletes only tickets carrying the `seedBatch:
+> "demo-seed-v1"` marker written by this script. It never deletes normal
+> user-created tickets, even if an ID somehow collided. Real tickets are
+> never modified or deleted by the seed or cleanup runs.
+
 ## Frontend hosting (S3 + CloudFront HTTPS)
 
 The built Vue app is hosted on AWS next to the existing backend: the
