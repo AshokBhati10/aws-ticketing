@@ -2,7 +2,7 @@
   <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-5xl w-full mx-auto">
     <router-link
       to="/"
-      class="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-5"
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-500 mb-5"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -25,8 +25,8 @@
       <!-- Header -->
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
-          <h1 class="text-2xl font-bold text-slate-900 break-words">{{ ticket.title }}</h1>
-          <p class="text-xs font-mono text-slate-400 mt-1">#{{ ticket.ticketId }}</p>
+          <h1 class="text-2xl font-bold text-text break-words">{{ ticket.title }}</h1>
+          <p class="text-xs font-mono text-text-faint mt-1">#{{ ticket.ticketId }}</p>
         </div>
         <div class="flex gap-2 shrink-0">
           <Badge type="status" :value="ticket.status" />
@@ -36,58 +36,58 @@
 
       <!-- Ticket information -->
       <section class="card-pad">
-        <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
+        <h2 class="text-sm font-semibold text-text uppercase tracking-wide mb-4">
           Ticket information
         </h2>
-        <p class="text-slate-700 whitespace-pre-wrap mb-6">{{ ticket.description }}</p>
+        <p class="text-text whitespace-pre-wrap mb-6">{{ ticket.description }}</p>
         <dl class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
           <div>
-            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Category</dt>
-            <dd class="font-medium text-slate-900">{{ ticket.category }}</dd>
+            <dt class="text-xs text-text-muted uppercase tracking-wide mb-1">Category</dt>
+            <dd class="font-medium text-text">{{ ticket.category }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Customer</dt>
-            <dd class="font-medium text-slate-900 break-all">{{ ticket.customerEmail }}</dd>
+            <dt class="text-xs text-text-muted uppercase tracking-wide mb-1">Customer</dt>
+            <dd class="font-medium text-text break-all">{{ ticket.customerEmail }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Assignee</dt>
-            <dd class="font-medium text-slate-900">
+            <dt class="text-xs text-text-muted uppercase tracking-wide mb-1">Assignee</dt>
+            <dd class="font-medium text-text">
               <span v-if="ticket.assignee" class="inline-flex items-center gap-1.5">
-                <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold inline-flex items-center justify-center">
+                <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-800 text-[11px] font-bold inline-flex items-center justify-center">
                   {{ ticket.assignee.charAt(0).toUpperCase() }}
                 </span>
                 <span class="break-all">{{ ticket.assignee }}</span>
               </span>
-              <span v-else class="text-slate-400 italic font-normal">Unassigned</span>
+              <span v-else class="text-text-faint italic font-normal">Unassigned</span>
             </dd>
           </div>
           <div>
-            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Created</dt>
-            <dd class="font-medium text-slate-900">{{ formatDate(ticket.createdAt) }}</dd>
+            <dt class="text-xs text-text-muted uppercase tracking-wide mb-1">Created</dt>
+            <dd class="font-medium text-text">{{ formatDate(ticket.createdAt) }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Last updated</dt>
-            <dd class="font-medium text-slate-900">{{ formatDate(ticket.updatedAt) }}</dd>
+            <dt class="text-xs text-text-muted uppercase tracking-wide mb-1">Last updated</dt>
+            <dd class="font-medium text-text">{{ formatDate(ticket.updatedAt) }}</dd>
           </div>
           <div>
-            <dt class="text-xs text-slate-500 uppercase tracking-wide mb-1">Status</dt>
+            <dt class="text-xs text-text-muted uppercase tracking-wide mb-1">Status</dt>
             <dd><Badge type="status" :value="ticket.status" /></dd>
           </div>
         </dl>
 
-        <div v-if="ticket.attachments && ticket.attachments.length" class="mt-6 pt-6 border-t border-slate-100">
-          <h3 class="text-sm font-semibold text-slate-900 mb-3">
-            Attachments <span class="text-slate-400 font-normal">({{ ticket.attachments.length }})</span>
+        <div v-if="ticket.attachments && ticket.attachments.length" class="mt-6 pt-6 border-t border-border">
+          <h3 class="text-sm font-semibold text-text mb-3">
+            Attachments <span class="text-text-faint font-normal">({{ ticket.attachments.length }})</span>
           </h3>
           <ul class="grid sm:grid-cols-2 gap-2">
             <li v-for="a in ticket.attachments" :key="a.key">
-              <a :href="a.downloadUrl" target="_blank" rel="noopener" class="file-card hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors">
-                <svg class="w-8 h-8 text-indigo-500 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <a :href="a.downloadUrl" target="_blank" rel="noopener" class="file-card hover:border-brand-300 hover:bg-brand-50/50 transition-colors">
+                <svg class="w-8 h-8 text-brand-500 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span class="min-w-0">
-                  <span class="block font-medium text-slate-800 truncate" :title="a.fileName">{{ a.fileName }}</span>
-                  <span class="text-xs text-slate-500">{{ formatSize(a.size) }}</span>
+                  <span class="block font-medium text-text truncate" :title="a.fileName">{{ a.fileName }}</span>
+                  <span class="text-xs text-text-muted">{{ formatSize(a.size) }}</span>
                 </span>
               </a>
             </li>
@@ -97,7 +97,7 @@
 
       <!-- Agent management (agents only) -->
       <section v-if="isAgent" class="card-pad">
-        <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
+        <h2 class="text-sm font-semibold text-text uppercase tracking-wide mb-4">
           Manage ticket
         </h2>
         <p v-if="saveError" class="alert-error mb-3">{{ saveError }}</p>
@@ -128,7 +128,7 @@
       <div class="grid lg:grid-cols-2 gap-5 items-start">
         <!-- Activity timeline -->
         <section class="card-pad">
-          <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">Activity</h2>
+          <h2 class="text-sm font-semibold text-text uppercase tracking-wide mb-4">Activity</h2>
           <ol v-if="activity.length" class="space-y-4">
             <li v-for="(a, i) in activity" :key="i" class="flex gap-3 text-sm">
               <div class="flex flex-col items-center">
@@ -136,25 +136,25 @@
                 <span v-if="i < activity.length - 1" class="timeline-line"></span>
               </div>
               <div class="min-w-0 pb-1">
-                <p class="font-semibold text-slate-800">{{ actionLabel(a.action) }}</p>
-                <p v-if="a.detail" class="text-slate-600 mt-0.5 break-words">{{ a.detail }}</p>
-                <p class="text-slate-400 text-xs mt-1 break-all">{{ a.byEmail }} · {{ formatDate(a.at) }}</p>
+                <p class="font-semibold text-text">{{ actionLabel(a.action) }}</p>
+                <p v-if="a.detail" class="text-text-muted mt-0.5 break-words">{{ a.detail }}</p>
+                <p class="text-text-faint text-xs mt-1 break-all">{{ a.byEmail }} · {{ formatDate(a.at) }}</p>
               </div>
             </li>
           </ol>
-          <p v-else class="text-slate-500 text-sm">No activity yet.</p>
+          <p v-else class="text-text-muted text-sm">No activity yet.</p>
         </section>
 
         <!-- Comments -->
         <section class="card-pad">
-          <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">
-            Comments <span class="text-slate-400 font-normal">({{ comments.length }})</span>
+          <h2 class="text-sm font-semibold text-text uppercase tracking-wide mb-4">
+            Comments <span class="text-text-faint font-normal">({{ comments.length }})</span>
           </h2>
           <div v-if="comments.length" class="space-y-3 mb-5 max-h-96 overflow-y-auto pr-1">
-            <div v-for="c in comments" :key="c.commentId" class="border border-slate-200 rounded-lg p-3.5 bg-slate-50/60">
-              <p class="text-sm text-slate-800 whitespace-pre-wrap break-words">{{ c.text }}</p>
-              <p class="text-xs text-slate-500 mt-2 flex flex-wrap items-center gap-1.5">
-                <span class="font-medium text-slate-600 break-all">{{ c.authorEmail }}</span>
+            <div v-for="c in comments" :key="c.commentId" class="border border-border rounded-lg p-3.5 bg-hover/60">
+              <p class="text-sm text-text whitespace-pre-wrap break-words">{{ c.text }}</p>
+              <p class="text-xs text-text-muted mt-2 flex flex-wrap items-center gap-1.5">
+                <span class="font-medium text-text-muted break-all">{{ c.authorEmail }}</span>
                 <span
                   class="badge"
                   :class="c.authorRole === 'agent' ? 'badge-role-agent' : 'badge-role-customer'"
@@ -162,11 +162,11 @@
                 >
                   {{ c.authorRole }}
                 </span>
-                <span class="text-slate-400">· {{ formatDate(c.createdAt) }}</span>
+                <span class="text-text-faint">· {{ formatDate(c.createdAt) }}</span>
               </p>
             </div>
           </div>
-          <p v-else class="text-slate-500 text-sm mb-4">No comments yet. Start the conversation below.</p>
+          <p v-else class="text-text-muted text-sm mb-4">No comments yet. Start the conversation below.</p>
           <p v-if="commentError" class="alert-error mb-3">{{ commentError }}</p>
           <textarea
             v-model="newComment"

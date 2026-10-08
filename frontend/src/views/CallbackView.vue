@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+  <div class="min-h-screen bg-page flex items-center justify-center px-4">
     <div class="card-pad w-full max-w-md text-center">
       <div v-if="error">
         <p class="alert-error mb-4">{{ error }}</p>
@@ -7,7 +7,7 @@
       </div>
       <div v-else>
         <span class="spinner !w-8 !h-8 mb-4"></span>
-        <p class="text-sm font-medium text-slate-600">Completing sign-in…</p>
+        <p class="text-sm font-medium text-text-muted">Completing sign-in…</p>
       </div>
     </div>
   </div>

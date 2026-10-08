@@ -3,7 +3,7 @@
   <router-view v-if="!isAppRoute" />
 
   <!-- Authenticated app shell: slim sidebar + top bar + workspace -->
-  <div v-else class="min-h-screen bg-slate-50 text-slate-900 flex">
+  <div v-else class="min-h-screen bg-page text-text flex">
     <!-- Mobile overlay -->
     <div
       v-if="sidebarOpen"
@@ -14,21 +14,21 @@
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200',
+        'fixed inset-y-0 left-0 z-40 w-64 bg-sidebar border-r border-border',
         'flex flex-col transform transition-transform duration-200',
         'lg:static lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
       ]"
     >
-      <div class="h-16 flex items-center gap-2.5 px-5 border-b border-slate-200 shrink-0">
-        <span class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+      <div class="h-16 flex items-center gap-2.5 px-5 border-b border-border shrink-0">
+        <span class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
           </svg>
         </span>
         <div class="leading-tight">
-          <p class="font-bold text-slate-900">TicketDesk</p>
-          <p class="text-[11px] text-slate-500">Support ticketing</p>
+          <p class="font-bold text-text">TicketDesk</p>
+          <p class="text-[11px] text-text-muted">Support ticketing</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@
           <span class="truncate">{{ item.label }}</span>
           <span
             v-if="item.count !== undefined"
-            class="ml-auto text-[11px] font-semibold bg-slate-100 text-slate-600 rounded-full px-2 py-0.5"
+            class="ml-auto text-[11px] font-semibold bg-hover text-text-muted rounded-full px-2 py-0.5"
           >
             {{ item.count }}
           </span>
@@ -72,10 +72,10 @@
         </template>
       </nav>
 
-      <div class="p-4 border-t border-slate-200 shrink-0">
-        <p class="text-[11px] text-slate-400 leading-relaxed">
+      <div class="p-4 border-t border-border shrink-0">
+        <p class="text-[11px] text-text-faint leading-relaxed">
           Signed in as<br />
-          <span class="font-medium text-slate-600 break-all">{{ email }}</span>
+          <span class="font-medium text-text-muted break-all">{{ email }}</span>
         </p>
       </div>
     </aside>

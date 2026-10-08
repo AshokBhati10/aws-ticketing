@@ -3,8 +3,8 @@
     <!-- Page header -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">{{ pageTitle }}</h1>
-        <p class="text-sm text-slate-500 mt-1">{{ pageDescription }}</p>
+        <h1 class="text-2xl font-bold text-text">{{ pageTitle }}</h1>
+        <p class="text-sm text-text-muted mt-1">{{ pageDescription }}</p>
       </div>
       <router-link to="/tickets/new" class="btn btn-primary">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -17,7 +17,7 @@
     <!-- Statistics -->
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
       <div class="stat-card">
-        <span class="stat-icon bg-indigo-100 text-indigo-600">
+        <span class="stat-icon bg-brand-100 text-brand-700">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
           </svg>
@@ -28,7 +28,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <span class="stat-icon bg-amber-100 text-amber-600">
+        <span class="stat-icon bg-badge-open-bg text-badge-open-text">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -39,7 +39,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <span class="stat-icon bg-blue-100 text-blue-600">
+        <span class="stat-icon bg-badge-progress-bg text-badge-progress-text">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -50,7 +50,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <span class="stat-icon bg-emerald-100 text-emerald-600">
+        <span class="stat-icon bg-badge-resolved-bg text-badge-resolved-text">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -66,7 +66,7 @@
     <div class="card p-4 mb-4">
       <div class="flex flex-col md:flex-row md:items-center gap-3">
         <div class="relative flex-1">
-          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-faint" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -77,14 +77,14 @@
           />
         </div>
         <div class="flex flex-wrap items-center gap-3">
-          <label class="flex items-center gap-2 text-sm text-slate-600">
+          <label class="flex items-center gap-2 text-sm text-text-muted">
             Status
             <select v-model="filters.status" @change="onFilterChange" class="select">
               <option value="">All</option>
               <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
             </select>
           </label>
-          <label class="flex items-center gap-2 text-sm text-slate-600">
+          <label class="flex items-center gap-2 text-sm text-text-muted">
             Priority
             <select v-model="filters.priority" @change="load" class="select">
               <option value="">All</option>
@@ -94,14 +94,14 @@
           <button
             v-if="hasActiveFilters"
             @click="clearFilters"
-            class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            class="text-sm text-brand-600 hover:text-brand-500 font-medium"
           >
             Clear filters
           </button>
         </div>
       </div>
-      <p v-if="activeViewLabel" class="text-xs text-slate-500 mt-3">
-        Showing: <span class="font-semibold text-slate-700">{{ activeViewLabel }}</span>
+      <p v-if="activeViewLabel" class="text-xs text-text-muted mt-3">
+        Showing: <span class="font-semibold text-text">{{ activeViewLabel }}</span>
       </p>
     </div>
 
@@ -114,7 +114,7 @@
       </div>
 
       <div v-else-if="displayedTickets.length === 0" class="empty-state">
-        <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <svg class="w-12 h-12 mx-auto text-border-strong" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
         </svg>
         <p class="empty-state-title">No tickets found</p>
@@ -146,29 +146,29 @@
               class="clickable"
               @click="$router.push(`/tickets/${t.ticketId}`)"
             >
-              <td class="font-mono text-xs text-slate-500 whitespace-nowrap">#{{ shortId(t.ticketId) }}</td>
-              <td class="font-medium text-slate-900 max-w-64">
+              <td class="font-mono text-xs text-text-muted whitespace-nowrap">#{{ shortId(t.ticketId) }}</td>
+              <td class="font-medium text-text max-w-64">
                 <span class="block truncate" :title="t.title">{{ t.title }}</span>
               </td>
               <td><Badge type="status" :value="t.status" /></td>
               <td><Badge type="priority" :value="t.priority" /></td>
-              <td class="text-slate-600 whitespace-nowrap">{{ t.category }}</td>
+              <td class="text-text-muted whitespace-nowrap">{{ t.category }}</td>
               <td class="whitespace-nowrap">
-                <span v-if="t.assignee" class="inline-flex items-center gap-1.5 text-sm text-slate-700">
-                  <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center">
+                <span v-if="t.assignee" class="inline-flex items-center gap-1.5 text-sm text-text">
+                  <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-800 text-[11px] font-bold flex items-center justify-center">
                     {{ t.assignee.charAt(0).toUpperCase() }}
                   </span>
                   <span class="truncate max-w-40" :title="t.assignee">{{ t.assignee }}</span>
                 </span>
-                <span v-else class="text-xs text-slate-400 italic">Unassigned</span>
+                <span v-else class="text-xs text-text-faint italic">Unassigned</span>
               </td>
-              <td class="text-slate-500 text-xs whitespace-nowrap">{{ formatDate(t.updatedAt) }}</td>
+              <td class="text-text-muted text-xs whitespace-nowrap">{{ formatDate(t.updatedAt) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
-    <p v-if="!loading && !error" class="text-xs text-slate-500 mt-3">
+    <p v-if="!loading && !error" class="text-xs text-text-muted mt-3">
       {{ displayedTickets.length }} of {{ tickets.length }} ticket(s)
     </p>
   </main>
