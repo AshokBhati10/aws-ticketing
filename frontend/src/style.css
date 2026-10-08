@@ -28,22 +28,24 @@
   color-scheme: light;
 
   /* Surfaces */
-  --page: #eef1f6;
+  --page: #e9edf3;
   --card: #ffffff;
-  --sidebar: #f8fafc;
+  --sidebar: #f7f9fc;
   --input: #ffffff;
-  --hover: #f1f5f9;
+  --surface-2: #f4f6fb;
+  --surface-3: #e8edf5;
+  --hover: #eef2f7;
   --active: #e2e8f0;
 
   /* Borders */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border: #dfe5ee;
+  --border-strong: #c3ccd9;
 
   /* Text */
   --text: #0f172a;
   --text-muted: #475569;
-  --text-faint: #94a3b8;
-  --placeholder: #94a3b8;
+  --text-faint: #8a94a6;
+  --placeholder: #8a94a6;
 
   /* Brand (indigo) scale -- light ramp */
   --brand-50: #eef2ff;
@@ -57,6 +59,11 @@
   --brand-800: #3730a3;
   --brand-900: #312e81;
   --brand-950: #1e1b4b;
+
+  /* Deep brand panel (login split, stays dark in both themes) */
+  --panel-brand: #1c1848;
+  --panel-brand-text: #eef2ff;
+  --panel-brand-muted: #b9b8e8;
 
   /* Status / priority / role badge pairs */
   --badge-open-bg: #fef3c7;
@@ -94,22 +101,24 @@
   color-scheme: dark;
 
   /* Surfaces */
-  --page: #0a101f;
-  --card: #131d33;
-  --sidebar: #0e1628;
-  --input: #0e1628;
-  --hover: #1e293b;
-  --active: #334155;
+  --page: #080d1a;
+  --card: #111a30;
+  --sidebar: #0c1425;
+  --input: #0c1425;
+  --surface-2: #16213a;
+  --surface-3: #1e2c4e;
+  --hover: #1a2540;
+  --active: #2b3a5e;
 
   /* Borders */
-  --border: #1e293b;
-  --border-strong: #334155;
+  --border: #1c2742;
+  --border-strong: #31405f;
 
   /* Text */
-  --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
-  --placeholder: #64748b;
+  --text: #eef2f9;
+  --text-muted: #9aa7bd;
+  --text-faint: #5f6d88;
+  --placeholder: #5f6d88;
 
   /* Brand scale -- functionally remapped for dark (see note above) */
   --brand-50: #191645;
@@ -123,6 +132,11 @@
   --brand-800: #c7d2fe;
   --brand-900: #e0e7ff;
   --brand-950: #eef2ff;
+
+  /* Deep brand panel (login split, stays dark in both themes) */
+  --panel-brand: #101736;
+  --panel-brand-text: #eef2ff;
+  --panel-brand-muted: #a3a7d6;
 
   /* Status / priority / role badge pairs -- tinted for dark surfaces */
   --badge-open-bg: #3a2c08;
@@ -163,6 +177,8 @@
   --color-card: var(--card);
   --color-sidebar: var(--sidebar);
   --color-input: var(--input);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-hover: var(--hover);
   --color-active: var(--active);
 
@@ -185,6 +201,10 @@
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
   --color-brand-950: var(--brand-950);
+
+  --color-panel-brand: var(--panel-brand);
+  --color-panel-brand-text: var(--panel-brand-text);
+  --color-panel-brand-muted: var(--panel-brand-muted);
 
   --color-badge-open-bg: var(--badge-open-bg);
   --color-badge-open-text: var(--badge-open-text);
@@ -231,61 +251,77 @@
       disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+    @apply bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500
+      shadow-sm;
   }
   .btn-secondary {
     @apply bg-card text-text-muted border border-border-strong hover:bg-hover
-      focus:ring-brand-500;
+      hover:text-text focus:ring-brand-500;
   }
   .btn-danger {
     @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5
+      rounded-lg text-sm font-medium text-text-muted hover:bg-hover
+      hover:text-text transition-colors cursor-pointer
+      focus:outline-none focus:ring-2 focus:ring-brand-500;
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
   }
 
-  /* ---------- Cards ---------- */
+  /* ---------- Cards & panels ---------- */
   .card {
     @apply bg-card rounded-xl border border-border shadow-sm;
   }
   .card-pad {
     @apply bg-card rounded-xl border border-border shadow-sm p-6;
   }
+  .panel {
+    @apply bg-surface-2 border border-border rounded-xl;
+  }
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-text-muted;
+  }
 
   /* ---------- Badges ---------- */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs
-      font-semibold whitespace-nowrap;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs
+      font-semibold whitespace-nowrap border border-transparent;
+  }
+  .badge-dot {
+    @apply w-1.5 h-1.5 rounded-full shrink-0;
   }
   .badge-open {
-    @apply bg-badge-open-bg text-badge-open-text;
+    @apply bg-badge-open-bg text-badge-open-text border-badge-open-text/20;
   }
   .badge-in-progress {
-    @apply bg-badge-progress-bg text-badge-progress-text;
+    @apply bg-badge-progress-bg text-badge-progress-text border-badge-progress-text/20;
   }
   .badge-resolved {
-    @apply bg-badge-resolved-bg text-badge-resolved-text;
+    @apply bg-badge-resolved-bg text-badge-resolved-text border-badge-resolved-text/20;
   }
   .badge-closed {
-    @apply bg-badge-closed-bg text-badge-closed-text;
+    @apply bg-badge-closed-bg text-badge-closed-text border-badge-closed-text/20;
   }
   .badge-low {
-    @apply bg-badge-low-bg text-badge-low-text;
+    @apply bg-badge-low-bg text-badge-low-text border-badge-low-text/20;
   }
   .badge-medium {
-    @apply bg-brand-100 text-brand-800;
+    @apply bg-brand-100 text-brand-800 border-brand-800/20;
   }
   .badge-high {
-    @apply bg-badge-high-bg text-badge-high-text;
+    @apply bg-badge-high-bg text-badge-high-text border-badge-high-text/20;
   }
   .badge-urgent {
-    @apply bg-badge-urgent-bg text-badge-urgent-text;
+    @apply bg-badge-urgent-bg text-badge-urgent-text border-badge-urgent-text/20;
   }
   .badge-role-agent {
-    @apply bg-badge-agent-bg text-badge-agent-text;
+    @apply bg-badge-agent-bg text-badge-agent-text border-badge-agent-text/20;
   }
   .badge-role-customer {
-    @apply bg-badge-customer-bg text-badge-customer-text;
+    @apply bg-badge-customer-bg text-badge-customer-text border-badge-customer-text/20;
   }
 
   /* ---------- Form controls ---------- */
@@ -306,28 +342,32 @@
       focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500;
   }
   .field-label {
-    @apply block text-sm font-medium text-text-muted mb-1.5;
+    @apply block text-sm font-medium text-text mb-1.5;
   }
   .field-hint {
     @apply text-xs text-text-faint mt-1;
   }
+  .form-section {
+    @apply border-b border-border pb-6 last:border-b-0 last:pb-0;
+  }
 
   /* ---------- Tables ---------- */
   .tbl {
-    @apply w-full text-sm;
+    @apply w-full text-sm border-collapse;
   }
   .tbl thead th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider
-      text-text-faint bg-hover border-b border-border whitespace-nowrap;
+    @apply px-4 py-2.5 text-left text-[11px] font-semibold uppercase
+      tracking-wider text-text-faint bg-surface-2 border-b border-border
+      whitespace-nowrap;
   }
   .tbl tbody td {
-    @apply px-4 py-3.5 border-b border-border align-middle;
+    @apply px-4 py-3 border-b border-border align-middle;
   }
   .tbl tbody tr:last-child td {
     @apply border-b-0;
   }
   .tbl tbody tr.clickable {
-    @apply hover:bg-brand-50/50 cursor-pointer transition-colors;
+    @apply hover:bg-brand-50/40 cursor-pointer transition-colors;
   }
 
   /* ---------- Sidebar navigation ---------- */
@@ -347,16 +387,68 @@
 
   /* ---------- Stat cards ---------- */
   .stat-card {
-    @apply bg-card rounded-xl border border-border shadow-sm p-5 flex items-center gap-4;
+    @apply bg-card rounded-xl border border-border shadow-sm p-5
+      flex items-center gap-4;
+  }
+  .stat-card-link {
+    @apply transition hover:border-brand-300 hover:shadow cursor-pointer;
   }
   .stat-icon {
     @apply w-11 h-11 rounded-xl flex items-center justify-center shrink-0;
   }
   .stat-value {
-    @apply text-2xl font-bold text-text;
+    @apply text-2xl font-bold text-text tabular-nums;
   }
   .stat-label {
     @apply text-xs font-medium text-text-muted uppercase tracking-wide;
+  }
+
+  /* ---------- Avatars ---------- */
+  .avatar {
+    @apply rounded-full bg-brand-100 text-brand-800 font-bold inline-flex
+      items-center justify-center shrink-0 select-none;
+  }
+
+  /* ---------- Toolbar & filter chips ---------- */
+  .toolbar {
+    @apply bg-card border border-border rounded-xl p-3 sm:p-4 shadow-sm;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border
+      border-brand-200 bg-brand-50 pl-3 pr-1.5 py-1 text-xs font-medium
+      text-brand-800;
+  }
+  .chip-x {
+    @apply p-0.5 rounded-full text-brand-700 hover:bg-brand-100
+      transition-colors cursor-pointer;
+  }
+
+  /* ---------- Pagination ---------- */
+  .page-btn {
+    @apply min-w-9 h-9 px-2 inline-flex items-center justify-center rounded-lg
+      text-sm font-medium text-text-muted hover:bg-hover hover:text-text
+      transition-colors disabled:opacity-40 disabled:pointer-events-none
+      focus:outline-none focus:ring-2 focus:ring-brand-500;
+  }
+  .page-btn-active {
+    @apply bg-brand-600 text-white hover:bg-brand-600 hover:text-white
+      font-semibold;
+  }
+
+  /* ---------- Metadata lists ---------- */
+  .meta-dt {
+    @apply text-[11px] text-text-faint uppercase tracking-wide mb-1;
+  }
+  .meta-dd {
+    @apply text-sm font-medium text-text;
+  }
+
+  /* ---------- Comments ---------- */
+  .comment {
+    @apply border border-border rounded-xl p-4 bg-card;
+  }
+  .comment-agent {
+    @apply bg-surface-2;
   }
 
   /* ---------- States ---------- */
@@ -364,10 +456,10 @@
     @apply text-center py-14 px-6;
   }
   .empty-state-title {
-    @apply text-sm font-semibold text-text-muted mt-3;
+    @apply text-sm font-semibold text-text mt-3;
   }
   .empty-state-text {
-    @apply text-sm text-text-faint mt-1;
+    @apply text-sm text-text-muted mt-1;
   }
   .alert-error {
     @apply bg-alert-error-bg border border-alert-error-border text-alert-error-text
@@ -386,12 +478,13 @@
       border-t-brand-600 animate-spin align-middle;
   }
   .skeleton-row {
-    @apply animate-pulse bg-hover rounded;
+    @apply animate-pulse bg-surface-3 rounded;
   }
 
   /* ---------- Activity timeline ---------- */
   .timeline-dot {
-    @apply w-2.5 h-2.5 rounded-full bg-brand-500 mt-1.5 shrink-0;
+    @apply w-2.5 h-2.5 rounded-full bg-brand-500 mt-1.5 shrink-0 ring-4
+      ring-brand-500/15;
   }
   .timeline-line {
     @apply w-px flex-1 bg-border mx-auto;
@@ -400,6 +493,6 @@
   /* ---------- File cards ---------- */
   .file-card {
     @apply flex items-center gap-3 border border-border rounded-lg px-3 py-2.5
-      bg-hover text-sm;
+      bg-surface-2 text-sm;
   }
 }

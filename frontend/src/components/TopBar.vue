@@ -1,10 +1,10 @@
 <template>
-  <header class="bg-card border-b border-border sticky top-0 z-30">
+  <header class="bg-card/95 backdrop-blur-sm border-b border-border sticky top-0 z-30">
     <div class="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0">
         <button
           @click="$emit('toggle-sidebar')"
-          class="lg:hidden p-2 -ml-2 rounded-lg text-text-muted hover:bg-hover"
+          class="lg:hidden p-2 -ml-2 rounded-lg text-text-muted hover:bg-hover hover:text-text transition-colors"
           aria-label="Toggle navigation"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -14,17 +14,18 @@
         <!-- Page context is rendered by each view; the brand lives in the sidebar -->
         <p class="lg:hidden text-sm font-bold text-brand-600 truncate">TicketDesk</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         <span
           class="badge"
           :class="role === 'agent' ? 'badge-role-agent' : 'badge-role-customer'"
         >
           {{ role === "agent" ? "Agent" : "Customer" }}
         </span>
-        <span class="text-sm text-text-muted hidden md:inline truncate max-w-56">{{ email }}</span>
+        <span class="text-sm text-text-muted hidden md:inline truncate max-w-56" :title="email">{{ email }}</span>
+        <span class="hidden sm:block w-px h-6 bg-border" aria-hidden="true"></span>
         <button
           @click="toggle"
-          class="p-2 rounded-lg text-text-muted hover:bg-hover transition-colors"
+          class="p-2 rounded-lg text-text-muted hover:bg-hover hover:text-text transition-colors"
           :aria-label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
           :title="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
         >
@@ -57,7 +58,12 @@
             />
           </svg>
         </button>
-        <button @click="logout" class="btn btn-secondary btn-sm">Sign out</button>
+        <button @click="logout" class="btn btn-secondary btn-sm">
+          <svg class="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+          </svg>
+          <span class="hidden sm:inline">Sign out</span>
+        </button>
       </div>
     </div>
   </header>

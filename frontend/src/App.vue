@@ -33,9 +33,20 @@
       </div>
 
       <nav class="flex-1 overflow-y-auto px-3 py-4">
+        <router-link
+          to="/tickets/new"
+          class="btn btn-primary w-full mb-4"
+          @click="sidebarOpen = false"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          New ticket
+        </router-link>
+
         <p class="nav-section-title pt-0!">Workspace</p>
         <router-link
-          v-for="item in navItems"
+          v-for="item in workspaceItems"
           :key="item.id"
           :to="item.to"
           class="nav-link mb-0.5"
@@ -46,12 +57,21 @@
             <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
           </svg>
           <span class="truncate">{{ item.label }}</span>
-          <span
-            v-if="item.count !== undefined"
-            class="ml-auto text-[11px] font-semibold bg-hover text-text-muted rounded-full px-2 py-0.5"
-          >
-            {{ item.count }}
-          </span>
+        </router-link>
+
+        <p class="nav-section-title">Status</p>
+        <router-link
+          v-for="item in statusItems"
+          :key="item.id"
+          :to="item.to"
+          class="nav-link mb-0.5"
+          :class="{ 'nav-link-active': item.match(route) }"
+          @click="sidebarOpen = false"
+        >
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
+          </svg>
+          <span class="truncate">{{ item.label }}</span>
         </router-link>
 
         <template v-if="categories.length">
@@ -73,10 +93,13 @@
       </nav>
 
       <div class="p-4 border-t border-border shrink-0">
-        <p class="text-[11px] text-text-faint leading-relaxed">
-          Signed in as<br />
-          <span class="font-medium text-text-muted break-all">{{ email }}</span>
-        </p>
+        <div class="flex items-center gap-2.5">
+          <Avatar :name="email" size="sm" />
+          <div class="min-w-0">
+            <p class="text-xs font-semibold text-text truncate">{{ email }}</p>
+            <p class="text-[11px] text-text-faint capitalize">{{ role }}</p>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -92,12 +115,14 @@
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import TopBar from "./components/TopBar.vue";
+import Avatar from "./components/Avatar.vue";
 import { getRole, getUserEmail } from "./lib/auth.js";
 
 const route = useRoute();
 const sidebarOpen = ref(false);
 const categories = ref([]);
 const email = getUserEmail();
+const role = getRole();
 
 const isAppRoute = computed(() => !!route.meta.requiresAuth);
 
@@ -116,8 +141,7 @@ const ICONS = {
 
 const hasNoView = (r) => !r.query.view && !r.query.status && !r.query.category;
 
-const navItems = computed(() => {
-  const role = getRole();
+const workspaceItems = computed(() => {
   const items = [
     {
       id: "dashboard",
@@ -160,29 +184,30 @@ const navItems = computed(() => {
       match: (r) => r.path === "/" && hasNoView(r),
     });
   }
-  items.push(
-    {
-      id: "open",
-      label: "Open",
-      icon: ICONS.open,
-      to: { path: "/", query: { status: "open" } },
-      match: (r) => r.query.status === "open" && !r.query.view,
-    },
-    {
-      id: "progress",
-      label: "In Progress",
-      icon: ICONS.progress,
-      to: { path: "/", query: { status: "in-progress" } },
-      match: (r) => r.query.status === "in-progress" && !r.query.view,
-    },
-    {
-      id: "resolved",
-      label: "Resolved",
-      icon: ICONS.resolved,
-      to: { path: "/", query: { status: "resolved" } },
-      match: (r) => r.query.status === "resolved" && !r.query.view,
-    }
-  );
   return items;
 });
+
+const statusItems = computed(() => [
+  {
+    id: "open",
+    label: "Open",
+    icon: ICONS.open,
+    to: { path: "/", query: { status: "open" } },
+    match: (r) => r.query.status === "open" && !r.query.view,
+  },
+  {
+    id: "progress",
+    label: "In Progress",
+    icon: ICONS.progress,
+    to: { path: "/", query: { status: "in-progress" } },
+    match: (r) => r.query.status === "in-progress" && !r.query.view,
+  },
+  {
+    id: "resolved",
+    label: "Resolved",
+    icon: ICONS.resolved,
+    to: { path: "/", query: { status: "resolved" } },
+    match: (r) => r.query.status === "resolved" && !r.query.view,
+  },
+]);
 </script>

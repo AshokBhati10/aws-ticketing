@@ -11,7 +11,7 @@
     </router-link>
 
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-text">Create ticket</h1>
+      <h1 class="text-xl sm:text-2xl font-bold text-text tracking-tight">Create support ticket</h1>
       <p class="text-sm text-text-muted mt-1">
         Describe your issue and our support team will pick it up.
       </p>
@@ -19,57 +19,67 @@
 
     <p v-if="error" class="alert-error mb-4">{{ error }}</p>
 
-    <form @submit.prevent="submit" class="card-pad space-y-5">
-      <div>
-        <label class="field-label" for="ct-title">Title <span class="text-red-500">*</span></label>
-        <input
-          id="ct-title"
-          v-model="form.title"
-          required
-          maxlength="200"
-          class="input"
-          placeholder="Brief summary of the issue"
-        />
-      </div>
-
-      <div>
-        <label class="field-label" for="ct-desc">Description <span class="text-red-500">*</span></label>
-        <textarea
-          id="ct-desc"
-          v-model="form.description"
-          required
-          rows="5"
-          class="textarea"
-          placeholder="What happened? Include steps to reproduce if relevant."
-        ></textarea>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form @submit.prevent="submit" class="card-pad space-y-6">
+      <!-- Ticket information -->
+      <fieldset class="form-section space-y-5">
+        <legend class="section-title mb-4">Ticket information</legend>
         <div>
-          <label class="field-label" for="ct-priority">Priority <span class="text-red-500">*</span></label>
-          <select id="ct-priority" v-model="form.priority" required class="select w-full">
-            <option v-for="p in priorities" :key="p" :value="p">{{ capitalize(p) }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="ct-category">Category <span class="text-red-500">*</span></label>
+          <label class="field-label" for="ct-title">Title <span class="text-red-500" aria-hidden="true">*</span></label>
           <input
-            id="ct-category"
-            v-model="form.category"
+            id="ct-title"
+            v-model="form.title"
             required
-            maxlength="100"
-            list="categories"
+            maxlength="200"
             class="input"
-            placeholder="e.g. Hardware"
+            placeholder="Brief summary of the issue"
           />
-          <datalist id="categories">
-            <option v-for="c in commonCategories" :key="c" :value="c" />
-          </datalist>
         </div>
-      </div>
 
-      <div>
-        <span class="field-label">Attachments <span class="font-normal text-text-muted">(optional, max 10MB each)</span></span>
+        <div>
+          <label class="field-label" for="ct-desc">Description <span class="text-red-500" aria-hidden="true">*</span></label>
+          <textarea
+            id="ct-desc"
+            v-model="form.description"
+            required
+            rows="5"
+            class="textarea"
+            placeholder="What happened? Include steps to reproduce if relevant."
+          ></textarea>
+        </div>
+      </fieldset>
+
+      <!-- Classification -->
+      <fieldset class="form-section">
+        <legend class="section-title mb-4">Classification</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="field-label" for="ct-priority">Priority <span class="text-red-500" aria-hidden="true">*</span></label>
+            <select id="ct-priority" v-model="form.priority" required class="select w-full">
+              <option v-for="p in priorities" :key="p" :value="p">{{ capitalize(p) }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="ct-category">Category <span class="text-red-500" aria-hidden="true">*</span></label>
+            <input
+              id="ct-category"
+              v-model="form.category"
+              required
+              maxlength="100"
+              list="categories"
+              class="input"
+              placeholder="e.g. Hardware"
+            />
+            <datalist id="categories">
+              <option v-for="c in commonCategories" :key="c" :value="c" />
+            </datalist>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Attachments -->
+      <fieldset class="form-section">
+        <legend class="section-title mb-4">Attachments</legend>
+        <span class="field-label">Files <span class="font-normal text-text-muted">(optional, max 10MB each)</span></span>
         <label
           class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border-strong rounded-xl px-6 py-8 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50/40 transition-colors"
         >
@@ -78,7 +88,7 @@
           </svg>
           <span class="text-sm font-medium text-text">Click to choose files</span>
           <span class="text-xs text-text-muted">Files are uploaded directly to secure storage</span>
-          <input type="file" multiple @change="onFiles" class="sr-only" />
+          <input type="file" multiple @change="onFiles" class="sr-only" aria-label="Choose attachment files" />
         </label>
 
         <ul v-if="files.length" class="mt-3 space-y-2">
@@ -94,7 +104,7 @@
               type="button"
               @click="removeFile(i)"
               class="p-1.5 rounded-lg text-text-faint hover:text-badge-urgent-text hover:bg-badge-urgent-bg"
-              aria-label="Remove file"
+              :aria-label="`Remove ${f.name}`"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -102,7 +112,7 @@
             </button>
           </li>
         </ul>
-      </div>
+      </fieldset>
 
       <div class="flex flex-col sm:flex-row gap-3 pt-1">
         <button type="submit" :disabled="submitting" class="btn btn-primary flex-1 sm:flex-none sm:px-8">
