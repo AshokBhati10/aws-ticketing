@@ -1,32 +1,31 @@
 <#
 .SYNOPSIS
-  Build the Vue frontend and deploy it to S3 Static Website Hosting.
+  Build the Vue frontend and deploy it to S3 + CloudFront (HTTPS).
 
 .DESCRIPTION
-  Self-driving deployment for the already-deployed backend stack. S3 static
-  website hosting ONLY - no CloudFront (kept minimal for this POC).
-    Phase A (only if the frontend website bucket does not exist yet):
-      updates the CloudFormation stack with DeployedFrontendUrl="http://bootstrap.invalid"
-      so the S3 static-website frontend bucket is created.
+  Self-driving deployment for the already-deployed backend stack. The
+  UNCHANGED S3 static-website frontend bucket is kept as the origin; a
+  CloudFront distribution serves it over HTTPS (default *.cloudfront.net
+  certificate, HTTP->HTTPS redirect for viewers).
+    Phase A (only if the CloudFront distribution does not exist yet):
+      updates the CloudFormation stack with DeployedFrontendUrl="https://bootstrap.invalid"
+      so the S3 bucket + CloudFront distribution are created.
     Phase B (always):
       1. Builds frontend/ with production VITE_* values. Values come from
          frontend/.env.production when present, otherwise from the -ApiUrl,
          -CognitoDomain and -CognitoClientId parameters. The OAuth redirect
-         and logout URIs are derived from the real S3 website URL.
+         (<cloudfront-url>/callback) and logout (<cloudfront-url>) URIs are
+         always derived from the real CloudFront URL.
       2. Syncs frontend/dist/ to the frontend S3 bucket (--delete).
-         (No invalidation step - there is no CDN in front of the bucket.)
-      3. Updates the stack's DeployedFrontendUrl parameter to the real
-         S3 website URL so API/S3 CORS allow it (localhost entries preserved).
+      3. Creates a CloudFront invalidation for "/*" so the new files go live.
+      4. Updates the stack's DeployedFrontendUrl parameter to the real
+         CloudFront HTTPS URL. Because it is HTTPS, Cognito callback/logout
+         URLs and API/S3 CORS automatically allow it (localhost entries are
+         preserved).
 
   Existing backend resources (Cognito pool/client, API Gateway, Lambda,
-  DynamoDB, attachments bucket) are not replaced - the stack update only
-  adds/modifies the frontend-hosting pieces.
-
-  IMPORTANT HTTP TRADE-OFF: S3 website endpoints are HTTP-only. Cognito
-  requires HTTPS callback URLs (localhost excepted), so the website URL is
-  deliberately NEVER added to the Cognito app client - sign-in from the
-  deployed site will fail at Cognito. Full login testing stays on
-  http://localhost:5173, which keeps working unchanged.
+  DynamoDB, attachments bucket) and the frontend S3 bucket are not replaced -
+  the stack update only adds the distribution and wires the URLs.
 
 .EXAMPLE
   .\scripts\deploy-frontend.ps1
@@ -103,24 +102,26 @@ function Invoke-StackDeploy([string]$deployedFrontendUrl, [object]$stack) {
   if ($LASTEXITCODE -ne 0) { throw "Stack update did not complete." }
 }
 
-# ---------- Phase A: ensure the frontend website bucket exists ----------
+# ---------- Phase A: ensure the CloudFront distribution exists ----------
 $stack = Get-StackJson
-$websiteUrl = Get-Output $stack "FrontendWebsiteUrl"
+$distId = Get-Output $stack "FrontendDistributionId"
 
-if ([string]::IsNullOrEmpty($websiteUrl)) {
-  Write-Host "Frontend website bucket not found - Phase A: creating S3 static-website bucket..."
-  Invoke-StackDeploy "http://bootstrap.invalid" $stack
+if ([string]::IsNullOrEmpty($distId)) {
+  Write-Host "CloudFront distribution not found - Phase A: creating S3 bucket + CloudFront distribution..."
+  Write-Host "(First-time distribution deployment takes ~5-15 minutes to reach Deployed status.)"
+  Invoke-StackDeploy "https://bootstrap.invalid" $stack
   $stack = Get-StackJson
-  $websiteUrl = Get-Output $stack "FrontendWebsiteUrl"
-  if ([string]::IsNullOrEmpty($websiteUrl)) { throw "Website bucket was not created." }
+  $distId = Get-Output $stack "FrontendDistributionId"
+  if ([string]::IsNullOrEmpty($distId)) { throw "CloudFront distribution was not created." }
 }
 
 $bucket = Get-Output $stack "FrontendBucketName"
-if ([string]::IsNullOrEmpty($bucket)) {
-  throw "Could not read FrontendBucketName from stack outputs."
+$cloudfrontUrl = Get-Output $stack "FrontendCloudFrontUrl"
+if ([string]::IsNullOrEmpty($bucket) -or [string]::IsNullOrEmpty($cloudfrontUrl)) {
+  throw "Could not read FrontendBucketName / FrontendCloudFrontUrl from stack outputs."
 }
 Write-Host "Frontend bucket : $bucket"
-Write-Host "Website URL     : $websiteUrl"
+Write-Host "CloudFront URL  : $cloudfrontUrl"
 
 # ---------- Resolve production VITE_* values ----------
 $envFile = Join-Path $FrontendDir ".env.production"
@@ -132,21 +133,21 @@ if (Test-Path $envFile) {
     $i = $t.IndexOf("=")
     if ($i -gt 0) { $fileVars[$t.Substring(0, $i).Trim()] = $t.Substring($i + 1).Trim() }
   }
-  Write-Host "Using values from frontend/.env.production (redirect URIs always come from the S3 website URL)."
+  Write-Host "Using values from frontend/.env.production (redirect URIs always come from the CloudFront URL)."
 }
 $apiUrlVal = if ($ApiUrl) { $ApiUrl } elseif ($fileVars["VITE_API_URL"]) { $fileVars["VITE_API_URL"] } else { throw "Missing API URL. Pass -ApiUrl or set VITE_API_URL in frontend/.env.production." }
 $domainVal = if ($CognitoDomain) { $CognitoDomain } elseif ($fileVars["VITE_COGNITO_DOMAIN"]) { $fileVars["VITE_COGNITO_DOMAIN"] } else { throw "Missing Cognito domain. Pass -CognitoDomain or set VITE_COGNITO_DOMAIN in frontend/.env.production." }
 $clientIdVal = if ($CognitoClientId) { $CognitoClientId } elseif ($fileVars["VITE_COGNITO_CLIENT_ID"]) { $fileVars["VITE_COGNITO_CLIENT_ID"] } else { throw "Missing Cognito client ID. Pass -CognitoClientId or set VITE_COGNITO_CLIENT_ID in frontend/.env.production." }
 
-# Redirect URIs follow the deployed origin - environment wins over .env files in Vite.
+# Redirect URIs follow the deployed HTTPS origin - environment wins over .env files in Vite.
 $env:VITE_API_URL = $apiUrlVal
 $env:VITE_COGNITO_DOMAIN = $domainVal
 $env:VITE_COGNITO_CLIENT_ID = $clientIdVal
 $env:VITE_AWS_REGION = $Region
-$env:VITE_COGNITO_REDIRECT_URI = "$websiteUrl/callback"
-$env:VITE_LOGOUT_URI = $websiteUrl
+$env:VITE_COGNITO_REDIRECT_URI = "$cloudfrontUrl/callback"
+$env:VITE_LOGOUT_URI = $cloudfrontUrl
 
-# ---------- Phase B: build and sync ----------
+# ---------- Phase B: build, sync, invalidate ----------
 Push-Location $FrontendDir
 try {
   if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
@@ -161,22 +162,25 @@ try {
   Write-Host "Syncing frontend/dist/ to s3://$bucket ..."
   aws s3 sync (Join-Path $FrontendDir "dist") "s3://$bucket" --delete --region $Region
   if ($LASTEXITCODE -ne 0) { throw "S3 sync failed." }
+
+  Write-Host "Creating CloudFront invalidation for /* ..."
+  aws cloudfront create-invalidation --distribution-id $distId --paths "/*" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "CloudFront invalidation failed." }
 } finally {
   Pop-Location
 }
 
-# ---------- Phase B (cont.): point CORS at the real website URL ----------
+# ---------- Phase B (cont.): point Cognito/CORS at the real CloudFront URL ----------
 $currentDeployed = Get-Param $stack "DeployedFrontendUrl"
-if ($currentDeployed -ne $websiteUrl) {
-  Write-Host "Wiring API/S3 CORS to $websiteUrl ..."
-  Invoke-StackDeploy $websiteUrl $stack
+if ($currentDeployed -ne $cloudfrontUrl) {
+  Write-Host "Wiring Cognito callback/logout URLs and CORS to $cloudfrontUrl ..."
+  Invoke-StackDeploy $cloudfrontUrl $stack
 } else {
-  Write-Host "Stack already points at $websiteUrl - no update needed."
+  Write-Host "Stack already points at $cloudfrontUrl - no update needed."
 }
 
 Write-Host ""
 Write-Host "Done." -ForegroundColor Green
-Write-Host "Open the app at: $websiteUrl"
-Write-Host "NOTE: the S3 website endpoint is HTTP-only (no CloudFront in this design)."
-Write-Host "Cognito requires HTTPS callbacks, so sign-in from the deployed URL will"
-Write-Host "fail - use http://localhost:5173 (npm run dev) for full login testing."
+Write-Host "Open the app at: $cloudfrontUrl"
+Write-Host "Cognito sign-in works from the deployed HTTPS URL (it is registered as a callback URL)."
+Write-Host "Local dev (npm run dev on http://localhost:5173) keeps working unchanged."

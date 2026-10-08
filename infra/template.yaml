@@ -30,14 +30,12 @@ Parameters:
     Type: String
     Default: ""
     Description: >-
-      Public URL of the deployed frontend
-      (e.g. http://my-bucket.s3-website-ap-southeast-2.amazonaws.com for S3
-      static website hosting). When set, the S3 static-website frontend bucket
-      is created and this URL is appended to the API/S3 CORS origins.
-      NOTE: Cognito only accepts HTTPS callback URLs (except localhost), so an
-      HTTP S3 website URL is NEVER added to the Cognito callback/logout URLs —
-      login from the deployed site will not work; use http://localhost:5173
-      for sign-in. Leave empty for backend-only deployments.
+      Public HTTPS URL of the deployed frontend
+      (e.g. https://d123abc.cloudfront.net). When set, the S3 static-website
+      frontend bucket and a CloudFront distribution (HTTPS via the default
+      *.cloudfront.net certificate) are created; this URL is appended to the
+      API/S3 CORS origins and, because it is HTTPS, to the Cognito
+      callback/logout URLs as well. Leave empty for backend-only deployments.
 
 Conditions:
   HasDeployedFrontendUrl: !Not [!Equals [!Ref DeployedFrontendUrl, ""]]
@@ -182,13 +180,14 @@ Resources:
               - "*"
             MaxAge: 3000
 
-  # ---------------- Frontend hosting (S3 static website) ----------------
+  # ---------------- Frontend hosting (S3 static website + CloudFront HTTPS) ----------------
   # Additive only: created only when DeployedFrontendUrl is set. The existing
-  # attachments bucket above is untouched; this is a SEPARATE bucket.
-  # NOTE: S3 website endpoints are HTTP-only (no CloudFront in this design,
-  # per the POC cost/simplicity decision). Cognito requires HTTPS callbacks,
-  # so the website URL is deliberately NOT added to the Cognito app client —
-  # sign-in keeps working on http://localhost:5173.
+  # attachments bucket above is untouched; the frontend uses a SEPARATE bucket.
+  # CloudFront sits in front of the UNCHANGED S3 website bucket (custom origin
+  # on the bucket website endpoint, HTTP CloudFront->origin, redirect-to-HTTPS
+  # for viewers, default *.cloudfront.net certificate). Because the deployed
+  # URL is HTTPS, it IS added to the Cognito callback/logout URLs via the
+  # FrontendUrlIsHttps condition.
   FrontendBucket:
     Type: AWS::S3::Bucket
     Condition: HasDeployedFrontendUrl
@@ -218,6 +217,53 @@ Resources:
             Principal: "*"
             Action: s3:GetObject
             Resource: !Sub "${FrontendBucket.Arn}/*"
+
+  # ---------------- Frontend CDN (CloudFront HTTPS in front of the S3 website bucket) ----------------
+  # The bucket above is NOT modified: CloudFront uses the bucket's website
+  # endpoint as a custom origin (HTTP between CloudFront and S3; HTTPS for
+  # viewers). No custom domain / ACM certificate - the default
+  # *.cloudfront.net certificate is used.
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: HasDeployedFrontendUrl
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "${ProjectName} frontend"
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: frontend-s3-website-origin
+            DomainName: !Select ["2", !Split ["/", !GetAtt FrontendBucket.WebsiteURL]]
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          TargetOriginId: frontend-s3-website-origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          # AWS-managed CachingDisabled policy: every request reaches the
+          # origin, so a fresh index.html is always served after each deploy.
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        # SPA fallback: Vue client-side routes (/login, /callback,
+        # /tickets/<id>, ...) serve index.html with HTTP 200.
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
 
   # ---------------- Lambda ----------------
   LambdaRole:
@@ -420,8 +466,13 @@ Outputs:
     Value: !Ref FrontendBucket
   FrontendWebsiteUrl:
     Condition: HasDeployedFrontendUrl
-    Description: >-
-      Public HTTP URL of the deployed frontend (S3 static website endpoint).
-      HTTP-only by design (no CloudFront); Cognito sign-in does not work from
-      this URL — use http://localhost:5173 for login.
+    Description: S3 static website endpoint of the frontend bucket (CloudFront origin; not used directly by viewers).
     Value: !GetAtt FrontendBucket.WebsiteURL
+  FrontendDistributionId:
+    Condition: HasDeployedFrontendUrl
+    Description: CloudFront distribution ID for the frontend (used for cache invalidations).
+    Value: !Ref FrontendDistribution
+  FrontendCloudFrontUrl:
+    Condition: HasDeployedFrontendUrl
+    Description: Public HTTPS URL of the deployed frontend (use for VITE_COGNITO_REDIRECT_URI etc.).
+    Value: !Sub "https://${FrontendDistribution.DomainName}"
